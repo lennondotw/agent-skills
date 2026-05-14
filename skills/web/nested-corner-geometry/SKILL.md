@@ -15,17 +15,22 @@ If the parent has different content paddings per axis (`px-6 py-4` is common in 
 
 For a child near just one edge (no corner involvement), the simpler rule applies: the gap to that edge should equal the gap any sibling content has — i.e., match the container's content padding on that axis. Don't invent a new gap value.
 
-## Rule 2 — Concentric corner radii
+## Rule 2 — Concentric corner radii (only when the child is inside the corner-arc region)
 
-When both child and parent are rounded, the child's corner radius should be **the parent's radius minus the gap between them**:
+The parent's rounded corner is a quarter-circle that occupies a square of side `r_outer` in each corner. This rule only matters when the child sits **inside that quarter-circle's bounding square** — that is, when **both** of the child's insets to the adjacent parent edges are **less than `r_outer`**. Outside that region the parent's corner curve is "off-screen" relative to the child, and the two curves never appear side-by-side, so there is nothing to be concentric with.
+
+Inside the corner-arc region, the child's radius should equal:
 
 ```
 r_inner = r_outer − inset_gap
 ```
 
-If `r_outer − inset_gap ≤ 0`, the child should have **square corners** (no rounding). A tiny positive radius (1-2 px) reads worse than zero — the eye notices a curve too tight for the parent.
+where `inset_gap` is the perpendicular distance from the child's edge to the nearest parent edge in the relevant axis. This produces visually parallel curves between the two rounded shapes — what the eye recognises as "tucked into the corner cleanly", the same principle that makes nested phone screen masks and OS window chrome feel right.
 
-The rule produces visually parallel curves between the two rounded shapes — what the eye recognises as "tucked into the corner cleanly". The same principle that makes nested phone screen masks and OS window chrome feel right.
+Edge cases for the math:
+
+- **`r_outer − inset_gap` is small positive (≈ 1-4 px)** — two reasonable readings: pick the exact concentric value, or drop to 0 (square corners) if a barely-rounded curve looks worse than no curve. Don't pick something in between like `rounded-sm` just because it's a Tailwind token — that's the worst of both worlds.
+- **`r_outer − inset_gap` ≤ 0, OR child sits outside the corner-arc region** — concentricity stops applying. The child uses the design system's normal radius for that component (typically `rounded-md` / `rounded-lg`), same as it would anywhere else in the app. Don't force square corners just because the math went negative; the math went negative because the rule doesn't apply.
 
 For a circle / pill inside a rounded container, the inscribed circle's radius matters: when the pill's height plus 2×inset_gap exceeds 2×r_outer, the pill's outer arc bulges past the container's inner arc envelope and the corner looks pinched. Either reduce pill height, increase inset, or use a smaller parent radius.
 
@@ -76,15 +81,16 @@ Since the avatar's centre lies further from the corner than the parent's radius,
 When something in a corner looks off but you can't pin it:
 
 1. Measure the gap from the child's visible edge to each adjacent inner content edge of the parent. Are they equal?
-2. If both are rounded: is `r_inner` equal to `r_outer − inset_gap`?
-3. If `r_outer − inset_gap` is small (< 4 px), is `r_inner` set to **zero** instead of trying to be "a little bit rounded"?
+2. Is the child actually inside the corner-arc region? — that's when both insets are `< r_outer`. If both insets ≥ `r_outer`, the child is in the straight-edge interior and Rule 2 doesn't apply; the child uses the design system's normal radius.
+3. If yes (inside the corner-arc region): is `r_inner ≈ r_outer − inset_gap`? If the value is small positive (1-4 px), prefer either the exact value or **zero**, not an in-between Tailwind token.
 4. Does the child's own padding match the rhythm of the parent's content padding? A `px-3 py-2` button next to a `px-6` heading creates a visible step the eye reads as misalignment.
 
 ## Anti-patterns
 
 - **Mismatched margins at corners** — `mt-3 mb-1` or `ml-4 mr-2` for an element that visually sits near a corner. If the design wants asymmetric, set the asymmetry deliberately at the parent layout level, not via random child margins.
-- **Hardcoded child radius regardless of context** — `rounded-md` (6 px) on every button. Inside a `rounded-2xl` card with inset 8 px, the concentric value would be 8 px (`rounded-lg`). Use a token / variable that scales with the parent.
-- **Tiny non-zero child radius near a square-edge limit** — when the math says `r_outer − inset ≤ 2 px`, snapping to `rounded-sm` is wrong. Use zero.
+- **Hardcoded child radius when the child is inside the corner-arc region** — `rounded-md` on a button tucked 8 px from the corner of a `rounded-2xl` card. The concentric value would be 8 px (`rounded-lg`). When inside the corner region, scale with the parent.
+- **Tiny non-zero child radius when concentric math gives 1-4 px** — snapping to `rounded-sm` because it's a Tailwind token, instead of either committing to the exact concentric value or dropping to zero.
+- **Forcing square corners when the child is past the corner region** — if `inset_gap ≥ r_outer`, the rule doesn't apply; the child can keep its design system default. Don't override to square just because the formula "would have" gone negative.
 - **`rounded-full` on a pill that's too tall** — if the pill's height ≥ `2 × inset_gap` near a corner, the pill's perfect circle on the cap clips the parent's rounded corner geometry. Use a smaller corner radius matching `r_outer − inset_gap`.
 
 ## When NOT to apply
