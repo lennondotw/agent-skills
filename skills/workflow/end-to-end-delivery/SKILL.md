@@ -1,6 +1,7 @@
 ---
 name: end-to-end-delivery
-description: End-to-end orchestration for shipping a multi-file change from concept to merged PR (or clean handoff). Use when the task touches more than one file, ends in a PR, or any time `gh pr create` is on the path. Sequences recon → plan → review → implement → verify → review → push → PR babysit → merge-or-handoff. Never fire-and-forget.
+description: |
+  End-to-end orchestration for shipping a multi-file change from concept to merged PR (or clean handoff). Use when the task touches more than one file, ends in a PR, or any time `gh pr create` is on the path. Sequences recon → plan → review → implement → verify → review → push → PR babysit → merge-or-handoff. Never fire-and-forget.
 ---
 
 # End-to-End Delivery

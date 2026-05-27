@@ -1,6 +1,7 @@
 ---
 name: reserve-line-height
-description: Reserve one line of height with `min-height: 1lh` so conditionally rendered text or swapping content (error lines, inline status, button spinner) doesn't cause vertical layout shift. Use when building rows that may be empty, or containers whose content toggles between a text label and a loading indicator of different height.
+description: |
+  Reserve one line of height with `min-height: 1lh` so conditionally rendered text or swapping content (error lines, inline status, button spinner) doesn't cause vertical layout shift. Use when building rows that may be empty, or containers whose content toggles between a text label and a loading indicator of different height.
 ---
 
 # Reserve Line Height

@@ -1,6 +1,7 @@
 ---
 name: flex-default-containers
-description: Wrapper-element default-block trap. Wrappers (`<div>` / `<section>` / card header / label strip / status row) that hold inline children (`<span>` / `<Badge>` / `<Eyebrow>` / `<Kbd>` / `<Dot>` / icon / `<svg>`) should declare `display: flex` (or `grid`) explicitly — the browser default `block` puts inline children in an IFC where the parent's strut leaks line-height leading into the box, producing the classic "extra space above/below the badge", "icon sits visibly lower than the label", and "Figma says 28px but Chrome renders 33px" symptoms. Use when reviewing a wrapper around inline content, when rendered height doesn't match `padding + font-size`, when a child sits visually off-centre, or when someone reaches for `display: block` on a `<span>` to fix spacing — even if the user never says "baseline", "leading", or "IFC".
+description: |
+  Wrapper-element default-block trap. Wrappers (`<div>` / `<section>` / card header / label strip / status row) that hold inline children (`<span>` / `<Badge>` / `<Eyebrow>` / `<Kbd>` / `<Dot>` / icon / `<svg>`) should declare `display: flex` (or `grid`) explicitly — the browser default `block` puts inline children in an IFC where the parent's strut leaks line-height leading into the box, producing the classic "extra space above/below the badge", "icon sits visibly lower than the label", and "Figma says 28px but Chrome renders 33px" symptoms. Use when reviewing a wrapper around inline content, when rendered height doesn't match `padding + font-size`, when a child sits visually off-centre, or when someone reaches for `display: block` on a `<span>` to fix spacing — even if the user never says "baseline", "leading", or "IFC".
 ---
 
 # Flex-Default Containers
