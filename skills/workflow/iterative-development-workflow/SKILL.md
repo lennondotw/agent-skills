@@ -17,7 +17,7 @@ Work iteratively in small, reviewable steps.
 ## Logging
 
 - Record a log for each iteration at:
-  `.agent/logs/YYYYMMDD-HHMMSS-slug-task-name.md`
-- Ensure `.agent/logs/` is in `.gitignore` and never committed.
+  `.agents/logs/YYYYMMDD-HHMMSS-slug-task-name.md`
+- Ensure `.agents/logs/` is in `.gitignore` and never committed.
 
 Only after CI passes, deliver the result for final verification/testing, then proceed to the next iteration.
