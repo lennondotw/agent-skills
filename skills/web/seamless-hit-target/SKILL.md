@@ -9,13 +9,26 @@ Use this when the visible affordance must keep its exact physical size, but the 
 
 ## Principle
 
-Separate three boxes:
+Small interactive controls usually need more pointer tolerance than their
+visible pixels suggest, but the extra tolerance should not change what the
+component looks like or how it focuses.
+
+Separate three boxes and choose each deliberately:
 
 - **Visual box**: the pixels the user sees.
 - **Focus box**: the element geometry that receives keyboard focus and draws `:focus-visible`.
 - **Hit box**: an invisible layer that can extend beyond the visual/focus box.
 
 Do not enlarge the real button just to improve pointer access. Physical size affects focus outlines, layout, alignment, and perceived component size. Keep the real element sized to the design; expand only an absolute child or pseudo-element.
+
+The goal is continuous ownership of nearby space. If two adjacent controls have
+a visual gap between them, that gap should usually still belong to one of the
+controls. Split it between neighbors so pointer movement has no dead zones.
+
+This is the same interaction principle as macOS Dock: icons have visible bounds,
+but the pointer does not need to land on the exact painted pixels. Nearby empty
+space is still owned by the closest item, so movement across the row feels
+continuous instead of brittle.
 
 ## Pattern
 
