@@ -1,0 +1,61 @@
+{
+  "skill_name": "sticky-scroll-remapping",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "A 200vh section contains a 100vh position: sticky panel. It snaps from normal movement to completely fixed and then snaps back out. Explain the geometry and implement a smooth Motion React compensation curve with a slow center drift, without intercepting wheel events.",
+      "expected_output": "Identifies the native 1-0-1 velocity kink, preserves CSS sticky, applies an endpoint-preserving compensation transform to an inner layer, and keeps per-frame values in MotionValues.",
+      "files": [],
+      "expectations": [
+        "Explains the defect as a first-derivative discontinuity in native sticky displacement.",
+        "Keeps CSS position: sticky as the layout anchor and transforms only an inner visual layer.",
+        "Defines compensation as native displacement minus integrated target displacement.",
+        "Preserves zero compensation at both endpoints and uses a non-zero center drift.",
+        "Implements drift as monotonic target velocity rather than a sinusoidal compensation bump.",
+        "Keeps per-frame scroll values out of React state."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "A vertical sticky section drives a horizontal card rail. The rail should ease into and out of travel, and at wide widths where every card fits there must be no pinned scroll phase. Show the responsive measurement and progress mapping.",
+      "expected_output": "Derives travel from content minus available width, sets section height to viewport plus travel, uses smooth direct progress for x, and naturally no-ops when travel is zero.",
+      "files": [],
+      "expectations": [
+        "Measures available content-box width rather than assuming viewport width.",
+        "Computes horizontal travel as max(0, content width minus available width).",
+        "Sets the section scroll height to viewport height plus actual travel.",
+        "Uses an independently smoothed horizontal progress rather than the vertical compensation value.",
+        "Produces zero horizontal travel and no synthetic pinned distance when the content fits."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review a sticky remap whose center still feels frozen and whose entry is abrupt. Explain which parameters control drift versus transition softness, how continuity order changes the result, and what numerical tests should guard the curve.",
+      "expected_output": "Separates drift velocity from transition distance, explains smoothstep versus smootherstep and integrated velocity, preserves endpoint area, and proposes displacement and velocity continuity tests.",
+      "files": [],
+      "expectations": [
+        "Treats drift velocity and transition distance as separate tuning controls.",
+        "Distinguishes cubic smoothstep, quintic smootherstep, and integrated velocity smoothing.",
+        "Explains why area under the target velocity curve must match native displacement.",
+        "Constrains drift and transition allocation to the available outer distance.",
+        "Checks endpoint compensation, endpoint displacement, and adjacent numerical velocity jumps.",
+        "Recommends verifying resize and reduced-motion behavior."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "A sticky scroll scene still feels wrong, but it is unclear whether the cause is native sticky geometry, the compensation curve, or an overflowing wrapper. Add a non-invasive debug mode with page rulers, a Disable Scroll Mapping control, and a whole-page outline overlay. Explain the diagnostic order and show the core React/CSS implementation.",
+      "expected_output": "Builds a document-scoped ruler, preserves an exact native baseline by zeroing remapped transforms without changing layout, and uses outlines rather than borders to reveal DOM geometry.",
+      "files": [],
+      "expectations": [
+        "Positions page rulers in document space so their marks move with native page scroll.",
+        "Uses varied major and minor tick lengths or weights to reduce visual strobing.",
+        "Disables remapping by returning zero compensation while preserving section and sticky geometry.",
+        "Gates nested remapped transforms with the same baseline flag when they are part of the tested interaction.",
+        "Uses CSS outlines rather than borders so the overlay does not change layout measurements.",
+        "Keeps rulers and overlays pointer-transparent and outside the measured layout.",
+        "Uses the tools in an explicit baseline-first diagnostic sequence."
+      ]
+    }
+  ]
+}
