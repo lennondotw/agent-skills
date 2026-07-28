@@ -1,7 +1,7 @@
 ---
 name: keep-elements-in-flow
 description: |
-  Keep UI elements in normal flow for resilient, content-driven layouts. Use when building or reviewing overlapping cards, preview stacks, localized actions, responsive surfaces, or code with many fixed dimensions and absolutely positioned children. Prefer Flexbox, Grid, relative positioning, negative margins, and content-driven sizing; keep absolute positioning for true overlays that should not reserve layout space.
+  Keep UI elements in normal flow for resilient, content-driven layouts. Use when building or reviewing overlapping cards, preview stacks, localized actions, responsive surfaces, or code with many fixed dimensions and absolutely positioned children. Prefer Flexbox, Grid, negative margins, and content-driven sizing; use relative positioning for stacking and keep absolute positioning for true overlays that should not reserve layout space.
 ---
 
 # Keep Elements In Flow
@@ -9,8 +9,8 @@ description: |
 ## Rule
 
 Keep elements in normal flow whenever their size or position should influence surrounding content.
-Use `relative` positioning and negative margins for in-flow overlap. Use `absolute` only when an
-element is intentionally independent of the layout and should not reserve space.
+Use negative margins for in-flow overlap. Use `relative` when stacking needs it, and use `absolute`
+only when an element is intentionally independent of the layout and should not reserve space.
 
 This is a default, not an absolute ban on fixed dimensions or absolute positioning.
 
@@ -47,9 +47,9 @@ Let content establish the geometry and use layout-aware overlap:
   <header className="text-center">...</header>
 
   <div className="flex items-center justify-center pt-8">
-    <Preview className="relative z-10 -mr-3" />
-    <Preview className="relative z-20" />
-    <Preview className="relative z-30 -ml-3" />
+    <Preview className="z-10 -mr-3" />
+    <Preview className="z-20" />
+    <Preview className="z-30 -ml-3" />
   </div>
 
   <button className="relative z-40 mx-auto -mt-7 block h-7 px-4">Action</button>
@@ -61,8 +61,9 @@ Let content establish the geometry and use layout-aware overlap:
 ```
 
 The action remains in flow. Its negative top margin creates the overlap, its fixed height preserves
-the control contract, and horizontal padding lets its width adapt to text. The dismiss button stays
-absolute because it is a true corner overlay and should not create a separate layout row.
+the control contract, and horizontal padding lets its width adapt to text. Its `relative` position
+only enables explicit stacking. The dismiss button stays absolute because it is a true corner
+overlay and should not create a separate layout row.
 
 ## What Participates In Layout
 
@@ -72,13 +73,14 @@ absolute because it is a true corner overlay and should not create a separate la
 | Width, height, padding, gap, margin | Yes                              | Box sizing and spacing                             |
 | Negative margin                     | Yes                              | Pull in-flow elements into overlap                 |
 | CSS `zoom`                          | Yes                              | Scale previews when scaled size must affect layout |
-| `position: relative`                | Keeps the original box in flow   | Stacking and small visual offsets                  |
+| `position: relative`                | Keeps the original box in flow   | Stacking and positioned containing blocks          |
 | `position: absolute` or `fixed`     | No                               | True overlays and viewport layers                  |
 | `transform`                         | No                               | Rotation, animation, and visual-only movement      |
 
-`position: relative` preserves the element's original layout slot. A relative `top` or `left` offset
-changes only where it paints, so prefer margins or layout primitives when siblings must react to the
-movement.
+`position: relative` preserves the element's original layout slot. Use it for stacking or as the
+containing block for an absolute child, not to create layout overlap. A relative `top` or `left`
+offset changes only where the element paints, so use margins or layout primitives when siblings must
+react to the movement.
 
 ## Fixed And Adaptive Dimensions
 
@@ -111,7 +113,7 @@ the overlay does not cover text or controls.
 1. Should this element reserve space in its parent?
 2. Should siblings move when its content grows or wraps?
 3. Can Flexbox, Grid, `gap`, `mx-auto`, or padding express the relationship?
-4. Can `relative` plus a negative margin create the overlap while preserving flow?
+4. Can a negative margin create the overlap while preserving flow?
 5. Is a fixed width or height a real component contract or an unexamined coordinate?
 6. Is the absolute element a true overlay that should remain independent of content?
 
