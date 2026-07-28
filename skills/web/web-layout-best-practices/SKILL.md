@@ -10,3 +10,4 @@ description: |
 - Use CSS `zoom` when scaling must affect layout; `transform: scale()` changes only visual rendering.
 - Prefer `fullscreen` layout in Storybook; use a `min-h-screen w-full flex items-center justify-center` decorator, adding `max-w-* mx-auto` when needed.
 - Choose fixed versus adaptive dimensions deliberately; for example, buttons usually use fixed `h-*` and `px-*` with content-driven width for font size and localization, while fixed `w-*` or adaptive height are exceptions.
+- Keep elements in flow when possible; use `relative` and negative margins for overlap, reserving `absolute` for true overlays.
