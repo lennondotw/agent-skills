@@ -21,6 +21,9 @@ center drift, and gradual acceleration without intercepting wheel or touch input
   continuity order, drift velocity, or endpoint constraints.
 - Read [references/motion-react.md](references/motion-react.md) before implementing this with
   Motion, `MotionValue`, `useScroll`, `useTransform`, `useAnimationFrame`, or responsive measurement.
+- Read [references/lenis-synchronized-remapping.md](references/lenis-synchronized-remapping.md)
+  before combining CSS sticky with a JS compensation transform on a page that uses Lenis, smooth
+  scrolling, or any non-native scroll driver.
 - Read [references/today-calibration.md](references/today-calibration.md) when a concrete calibrated
   example is useful. Treat its values as a starting profile, not universal constants.
 - Read [references/debug-instrumentation.md](references/debug-instrumentation.md) when the motion is
@@ -201,14 +204,24 @@ When `travel === 0`, collapse the section back to its content height and let bot
 compensation and horizontal mapping become no-ops. Do not invent a minimum pinned distance unless the
 product explicitly requires dwell time even when all content fits.
 
-### 9. Keep The Hot Path In Motion Values
+### 9. Keep The Hot Path In One Scroll Driver
 
-Use `useScroll -> useTransform -> motion style`. Do not mirror per-frame progress into React state.
-Use function-form `useTransform` when several measured MotionValues contribute to one result; its
-dependencies are collected automatically.
+The native sticky position and the compensation transform must be updated from the same scroll
+snapshot before paint. If the page has Lenis, run the remap from Lenis' own RAF after
+`lenis.raf(time)` and write the transform synchronously in that same callback chain.
 
-Use `useAnimationFrame` for procedural updates or a cheap viewport-size guard. Do not perform layout
-reads every frame when the geometry has not changed.
+Do not rely on a second scroll observer, native `scroll` listener, `useScroll`, or MotionValue render
+commit for compensation that must cancel CSS sticky's native displacement. Those paths can be one
+frame behind the sticky layout during fast wheel input, which shows up as a visible correction at
+entry or exit.
+
+When no single JS scroll driver can synchronize the transform with sticky layout, do not enable this
+remapping. Return native sticky or a static layout instead. A compensation transform that lags the
+browser's sticky calculation will jitter by design; making the curve smoother cannot fix that timing
+defect.
+
+Do not mirror per-frame progress into React state. Keep geometry in refs or external values, and keep
+layout reads out of the scroll frame unless geometry actually changed.
 
 ## Choosing Smoothness Order
 
@@ -250,6 +263,11 @@ Tune in this order so each change has one interpretation:
 - Resize while the section is active and confirm scroll distance recomputes.
 - Check `prefers-reduced-motion`; normally return native sticky with no compensation.
 - Inspect the real page with visible rulers or fixed page marks so native displacement remains legible.
+- In a real browser, sample a concrete text range or layer rect at 60 fps while dispatching wheel
+  input. Compare the actual transform against the curve evaluated at current `scrollY`; if it matches
+  the previous sample instead, the transform write is one frame late.
+- Verify fast wheel input, not only slow trackpad or scripted `scrollTo`. Slow gestures can hide a
+  one-frame lag.
 
 ## Use A Non-Invasive Debug Triad
 
@@ -298,5 +316,11 @@ node scripts/sample-profile.mjs \
   effect needs fully correct initial and final states.
 - **Adding fake scroll distance:** breaks responsive no-op behavior when content already fits.
 - **Updating React state on scroll:** adds reconciliation to a 60 Hz path and makes stutter more likely.
+- **Computing in the right frame but committing in the next one:** a MotionValue or framework render
+  path can receive the current scroll position yet still apply the DOM transform one frame later.
+  For sticky compensation, write the transform synchronously from the active scroll driver's frame.
+- **Running remap without Lenis or another synchronized driver:** CSS sticky and JS transform updates
+  are not guaranteed to share a frame. Disable the remap when the driver is unavailable, disabled, or
+  reduced-motion has turned it off.
 - **Ignoring measurement timing:** stale padding or container width creates incorrect travel after
   resize.

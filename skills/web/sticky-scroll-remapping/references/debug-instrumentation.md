@@ -17,9 +17,45 @@ must avoid changing the scene it measures.
    and every overflow or transform ancestor.
 5. Resize while stopped inside the scene. Repeat the A/B comparison and verify
    that disabling mapping still produces the same native geometry.
+6. If the defect appears only during fast scroll, run a requestAnimationFrame
+   sampler with real wheel input and compare the actual transform with the
+   formula evaluated at the current `scrollY`.
 
 Do not turn on every diagnostic at once initially. The tools are most useful as
 controlled variables.
+
+## Frame Sampler For Fast Wheel Jitter
+
+Visual inspection is often too imprecise for one-frame scroll defects. Sample a
+specific visible text range or stable layer rect at 60 fps and record the scroll
+driver state next to the DOM position.
+
+Capture at least:
+
+- `window.scrollY`;
+- sticky anchor `getBoundingClientRect()`;
+- transformed layer `getBoundingClientRect()`;
+- the concrete word or glyph range being inspected;
+- actual `translateY` parsed from `getComputedStyle(layer).transform`;
+- expected `translateY` from the remapping formula at the same `scrollY`.
+
+Use real wheel input for this test. In Chrome DevTools Protocol or Playwright,
+dispatch `mouseWheel` events at roughly frame cadence and include a fast delta
+case. Scripted `scrollTo` can skip the same smoothing and input path that exposes
+the bug.
+
+Interpretation:
+
+- actual transform equals expected transform at current `scrollY`: the writer is
+  synchronized; inspect the curve or geometry next;
+- actual transform equals the previous sample's expected transform: the math is
+  probably correct, but the DOM transform commits one frame late;
+- word range jumps while layer transform is correct: inspect nested transforms,
+  font/layout changes, or active-word scaling instead of the sticky remap.
+
+This sampler should be non-invasive. Do not add borders, extra wrappers, or
+layout-affecting markers to the measured scene. Use `Range#getClientRects()` for
+text and global overlay instrumentation for visuals.
 
 ## Page Rulers
 
