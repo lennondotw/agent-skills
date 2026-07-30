@@ -108,10 +108,9 @@ report.json
 Keep implementation code in the target project and only scripts, measurements, screenshots, and
 reports in `runs-local/`.
 
-Read `<workspace>/README.md` and the nearest script under `<workspace>/runs-example/` before writing
-a new run; the example covers REST export and `/v1/me` validation, 4x capture, background
-compositing, hierarchy and geometry measurement, grouped artifacts, and report generation. Do not
-edit `runs-example/` during ordinary project work.
+Read `<workspace>/README.md` and the reusable scripts under `<workspace>/scripts/` before writing a
+new run. Repository-owned repro fixtures live under the repository's top-level `evals/` directory;
+they are evidence for developing this skill, not mutable contents of an initialized workspace.
 
 ## Measure Before Capturing
 
@@ -247,8 +246,8 @@ document overflow, clipping, overlap, or broken wrapping. Record the width and p
 
 The workspace is shared and persistent. Give each task a distinct top-level subject and reserve a new
 iteration with an atomic `mkdir`; if it exists, take the next number instead of editing another
-agent's run. Never use a shared persistent browser profile. Ordinary runs do not modify
-`runs-example/`, package metadata, or the skill.
+agent's run. Never use a shared persistent browser profile. Ordinary runs do not modify package
+metadata or the skill.
 
 Compare only states represented by an exact Figma node. Production hover, focus, pressed, loading,
 and disabled behavior follows the target project's interaction conventions; do not claim visual

@@ -4,17 +4,13 @@ Shared harness workspace for comparing Figma-rendered references against real br
 
 The repository should only track reusable harness code, package metadata, and documentation. Per-page comparison runs are persistent local artifacts and stay ignored.
 
-Recommended run layout:
+Run layout:
 
 ```text
-runs-example/
-  landing-header/
+runs-local/
+  <subject>/
     iteration-001/
-      soft-gradient-pill-tab/
-        01-expected-figma@4x.png
-        02-actual-chromium@4x.png
-        03-diff-pixelmatch.png
-      gradient-stroke-pill-button/
+      <comparison-name>/
         01-expected-figma@4x.png
         02-actual-chromium@4x.png
         03-diff-pixelmatch.png
@@ -23,9 +19,9 @@ runs-example/
       report.json
 ```
 
-`runs-local/` uses the same shape for actual agent runs and is ignored by git.
-Iterate in `runs-local/` first. Promote only a cleaned-up representative run to
-`runs-example/` after inspecting the screenshots and DOM/Figma hierarchy.
+`runs-local/` is persistent local evidence and is ignored by git. Repository-maintained repro
+fixtures belong in the agent-skills repository's top-level `evals/` directory, not in this workspace
+template.
 
 Workflow:
 

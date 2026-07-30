@@ -15,6 +15,6 @@
     "isolatedModules": true,
     "types": ["node"]
   },
-  "include": ["scripts/**/*.mts", "runs-example/**/*.mts"],
+  "include": ["scripts/**/*.mts"],
   "exclude": ["node_modules", "runs-local"]
 }
