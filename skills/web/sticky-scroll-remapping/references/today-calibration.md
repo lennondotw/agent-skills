@@ -19,18 +19,17 @@ center drift and slightly softer entry and exit, producing the current values ab
 Large-screen geometry:
 
 ```text
-outer track height: 200dvh
-content canvas height: 1068px
-visual top compensation: 256px
-section block padding: 60px top and bottom
-sticky minimum height: 1068 + 256 + 120 = 1444px
-actual top padding: 256 + 60 = 316px
-actual bottom padding: 60px
+content-driven track height: measured content height + 2000px normal-flow spacer sibling
+sticky top: max(0, (viewport height - measured content height) / 2)
+section block padding: 60px top and bottom on the sticky content wrapper
 ```
 
-The sticky surface remains `100dvh` when the viewport is tall enough and grows to its `1444px`
-minimum when content requires it. The outer track remains responsible for the two-viewport input
-distance.
+The sticky content remains in normal document flow, so the scene enters immediately after the
+previous section instead of reserving a blank viewport-sized frame. The computed sticky `top` centers
+the content while it is pinned when the viewport is tall enough; if the content is taller than the
+viewport, `top` resolves to `0`. The extra scroll distance is a sibling spacer after the sticky
+anchor, not section bottom padding, so it expands the section height without changing the sticky
+anchor's own box or the section padding edge.
 
 Reference test geometry:
 
@@ -62,7 +61,8 @@ const contentWidth = 1350;
 const paddingInline = "max(45px, calc((100vw - 1350px) / 2))";
 const travel = Math.max(0, contentWidth - availableWidth);
 
-sectionHeight = viewportHeight + travel;
+sectionHeight = measuredSectionContentHeight + travel * travelHeightFactor;
+stickyTop = Math.max(0, (viewportHeight - measuredSectionContentHeight) / 2);
 ```
 
 Current authored content consists of three `430px` cards with two `30px` gaps:
@@ -71,9 +71,9 @@ Current authored content consists of three `430px` cards with two `30px` gaps:
 3 * 430 + 2 * 30 = 1350px
 ```
 
-At viewport widths of `1440px` and above, the available content width is `1350px`, so travel becomes
-zero. The section collapses to one viewport and both remaps become no-ops. At `1200px`, available width
-is `1110px`, travel is `240px`, and a `900px` viewport produces a `1140px` section.
+At viewport widths where the available content width is at least `1350px`, travel becomes zero. The
+section collapses to its content height and both remaps become no-ops. At narrower widths, the extra
+scroll distance is driven by horizontal overflow rather than by `vh` or `dvh`.
 
 Horizontal easing uses:
 

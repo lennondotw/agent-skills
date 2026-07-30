@@ -60,16 +60,65 @@ Use this structure:
 
 ```tsx
 <section className="relative" ref={trackRef}>
-  <div className="sticky top-0 h-dvh" ref={stickyRef}>
-    <motion.div style={{ y: compensationY }}>{children}</motion.div>
+  <div className="sticky top-0 h-dvh overflow-visible" ref={stickyRef}>
+    <motion.div style={{ y: compensationY }}>
+      <div className="overflow-hidden">{children}</div>
+    </motion.div>
   </div>
 </section>;
 ```
 
 The outer section owns scroll distance. The sticky node remains the native layout anchor. Apply the
 compensation only to an inner visual layer so CSS sticky continues to determine containment and exit.
+Keep the sticky anchor `overflow-visible` by default. The compensation transform can move the inner
+visual layer outside the sticky anchor's border box, so clipping on the anchor can cut off content
+during entry, center drift, or exit. Put clipping on the actual viewport, card, mask, or media layer
+inside the transformed content instead. Only clip on the sticky anchor when that anchor is explicitly
+intended to be the clip root and the remap amplitude has been included in its measured height.
 
-### 2. Measure The Real Geometry
+### 2. Choose The Track Layout Strategy
+
+Pick the scroll track geometry deliberately. There are two common layouts:
+
+1. **Document-flow-first sticky:** let the sticky content keep its natural block size in the normal
+   document flow. Compute `top = max(0, (viewportHeight - contentHeight) / 2)` from measured content
+   height, then apply that value to the sticky anchor. This keeps the scene tightly attached to the
+   previous section while still pinning near visual center after it enters. If content is taller than
+   the viewport, `top` becomes `0` and the scene avoids centering overflow.
+2. **Viewport-frame sticky:** wrap content in a `100vh` or `100dvh` frame and center inside that
+   frame. This guarantees a full-screen entry with intentional whitespace above and below the content,
+   but it can show a long blank approach on tall screens and can clip or overflow when content is
+   taller than the viewport.
+
+For pinned marketing/story sections, prefer the document-flow-first strategy when adjacent sections
+should feel naturally connected. Use the viewport-frame strategy only when the full-screen entrance is
+part of the intended composition.
+
+Use `vh` for an authored viewport-sized scroll track when the browser chrome should not change the
+timeline length during interaction. Use `dvh` for a visible viewport-sized surface that should follow
+dynamic browser chrome. Do not use either unit when the desired scroll-driven timeline distance is a
+fixed authored amount; instead derive the track height from measured content height plus a fixed
+extra distance, for example:
+
+```ts
+trackHeight = contentHeight + fixedScrollDistance;
+```
+
+When the sticky child stays in flow, prefer a normal-flow spacer sibling over a large
+`padding-block-end` on the section. A large section padding can change the sticky containing block's
+padding edge and make sticky behavior appear to stop early or fail. Keep the sticky anchor's own box
+clean and let the spacer provide only scroll distance:
+
+```tsx
+<section className="relative">
+  <div className="sticky" style={{ top }}>
+    {children}
+  </div>
+  <div aria-hidden className="pointer-events-none h-[2000px]" />
+</section>
+```
+
+### 3. Measure The Real Geometry
 
 Track these values outside React state:
 
@@ -82,7 +131,7 @@ Track these values outside React state:
 Use `ResizeObserver` for content geometry and a viewport-size guard for window changes. Recalculate
 derived scroll distance after padding, fonts, images, and responsive layout settle.
 
-### 3. Define The Native And Target Curves
+### 4. Define The Native And Target Curves
 
 Model native sticky displacement as a piecewise `1 -> 0 -> 1` velocity profile. Define a target
 velocity profile with:
@@ -96,7 +145,7 @@ velocity profile with:
 Integrate velocity to obtain target displacement. Preserve the total area under the velocity curve,
 otherwise the remapped element will not meet native layout at both endpoints.
 
-### 4. Apply Compensation, Not Absolute Positioning
+### 5. Apply Compensation, Not Absolute Positioning
 
 ```ts
 compensation = nativeDisplacement - targetDisplacement;
@@ -105,7 +154,7 @@ compensation = nativeDisplacement - targetDisplacement;
 Apply that difference as `translateY`. Compensation must be zero at the first and last progress
 values. This lets the remapped projection join native layout without accumulated offset.
 
-### 5. Keep Drift Non-Zero
+### 6. Keep Drift Non-Zero
 
 A true stationary plateau recreates the hard pinned feeling. Use a small positive **target velocity**.
 Drift is the derivative of target displacement with respect to input scroll distance, not the
@@ -122,7 +171,7 @@ Do not fake drift with a periodic position offset such as `sin`, `sin^2`, or a s
 curves can keep compensation non-zero while their center velocity returns to zero or reverses sign.
 Verify drift by sampling visual position on both sides of the midpoint and measuring its slope.
 
-### 6. Reject Or Constrain Infeasible Parameters
+### 7. Reject Or Constrain Infeasible Parameters
 
 The extra distance introduced by drift must fit inside the native leading and trailing movement.
 Before constructing transitions:
@@ -135,7 +184,7 @@ Before constructing transitions:
 Do not rely on `Math.max(0, outerScale)` alone. It hides an impossible profile and can create a
 displacement mismatch or an endpoint jump.
 
-### 7. Smooth Nested Progress Separately
+### 8. Smooth Nested Progress Separately
 
 If vertical scroll also drives horizontal cards, do not reuse the compensation value as horizontal
 progress. Derive a separate normalized progress over the actual horizontal travel interval, then map
@@ -145,14 +194,14 @@ Preserve responsive behavior:
 
 ```ts
 travel = Math.max(0, contentWidth - availableWidth);
-sectionHeight = viewportHeight + travel;
+sectionHeight = contentHeight + travel;
 ```
 
-When `travel === 0`, collapse the section back to one viewport and let both vertical compensation and
-horizontal mapping become no-ops. Do not invent a minimum pinned distance unless the product explicitly
-requires dwell time even when all content fits.
+When `travel === 0`, collapse the section back to its content height and let both vertical
+compensation and horizontal mapping become no-ops. Do not invent a minimum pinned distance unless the
+product explicitly requires dwell time even when all content fits.
 
-### 8. Keep The Hot Path In Motion Values
+### 9. Keep The Hot Path In Motion Values
 
 Use `useScroll -> useTransform -> motion style`. Do not mirror per-frame progress into React state.
 Use function-form `useTransform` when several measured MotionValues contribute to one result; its
@@ -234,6 +283,9 @@ node scripts/sample-profile.mjs \
 ## Failure Patterns
 
 - **Transforming the sticky anchor itself:** changes the coordinate relationship CSS sticky is using.
+- **Clipping on the sticky anchor:** cuts off the compensated inner layer when `translateY` moves it
+  outside the sticky anchor. Keep the sticky anchor `overflow-visible`; clip on a deeper viewport,
+  card, mask, or media element instead.
 - **Using `fixed` immediately:** discards native containment and requires rebuilding entry, exit, and
   resize behavior.
 - **Springing raw scroll progress:** introduces temporal lag; the same scroll position can render at
