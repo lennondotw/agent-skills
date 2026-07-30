@@ -22,6 +22,7 @@ These inherit by default, so a probe under `document.body` gets `body`'s values,
 `@container (min-width: 400px) { .card { … } }` resolves against the nearest ancestor with `container-type: inline-size` (or `size`), matching `container-name` if named. The queried element's **content-relevant** styles (font-size, line-height, padding, `display`, column count, `line-clamp`) flip based on the *container's* size — invisible in the element's own CSS.
 
 Off-flow this breaks three ways:
+
 1. **No container ancestor** → `@container` rules never match → element styles as if the container were absent → different height.
 2. **Wrong-sized container** (an accidental `container-type` high up, or on your probe wrapper) → matches the wrong breakpoint → wrong styles.
 3. `container-type: inline-size` also establishes **size containment on the block axis + layout/style containment** — putting it on the wrong element distorts or zeroes the read.

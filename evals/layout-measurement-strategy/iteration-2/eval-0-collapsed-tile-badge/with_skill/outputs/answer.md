@@ -67,6 +67,7 @@ function StageBadge({ stage }: { stage: string }) {
 ```
 
 Notes:
+
 - Anchoring to `top/right` (not `bottom`) means the badge never depends on tile height, so there is nothing to recompute as the tile grows. This is what makes it immune to the streaming/font/image races.
 - If the badge must nestle inside a *rounded* chrome corner, keep its inset equal on both axes and make its radius concentric (`r_inner = r_outer − inset`) — but that's still pure CSS, still no measured height.
 - If you want the badge to visually clear the border rather than overlap it, offset by the padding (as above) or by `top: calc(var(--border-w) + 4px)`.
@@ -149,7 +150,7 @@ function WidgetTile({ children, stage }: { children: React.ReactNode; stage: str
 Key differences from your original code, and why each matters:
 
 | Your code | Fix | Why |
-|---|---|---|
+| --- | --- | --- |
 | `offsetHeight` in `useLayoutEffect([])`, once | `ResizeObserver`, re-fires on every reflow | Content arrives in 3 async waves (stream, font swap, image decode). One read can't see them; the observer does. |
 | Commits any number | `trustHeight` guard rejects border-only | A content-bearing box measuring ≈ chrome height means *layout hasn't happened*, not *height is 0*. Refuse it. |
 | No await on content | `document.fonts.ready` + RO catches images | Fallback font metrics and un-decoded images give provisional/short boxes. |

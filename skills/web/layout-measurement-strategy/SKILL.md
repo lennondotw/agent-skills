@@ -72,7 +72,7 @@ Full context-replication travel list and the container-query / shadow-DOM detail
 ## Choosing the measurement API
 
 | Need | Use | Notes |
-|---|---|---|
+| --- | --- | --- |
 | "Notify me when the real size settles" (fonts/images/stream) | **`ResizeObserver`** (`borderBoxSize[0].blockSize`) | Fires after layout, before paint; re-fires on every change; hands you the value **without forcing a reflow**. The default for auto-height. |
 | Fractional visual size, **no transforms** in the chain | `getBoundingClientRect().height` | Sub-pixel float; **includes transforms** (a `scale(0.5)` reports half). Forces a sync reflow. |
 | Transform-immune integer layout size | `offsetHeight` / `offsetWidth` | Ignores transforms; **rounds to integer** (don't sum many). Border-box. `0` ⇒ `display:none`. |
@@ -85,7 +85,7 @@ Box consistency: `getBoundingClientRect` / `offset*` are **border-box**; `conten
 ## Timing
 
 | Situation | Primitive | Why |
-|---|---|---|
+| --- | --- | --- |
 | Height depends only on a width you set; content already in DOM; no web fonts/images | **Forced reflow**: write width → read `offsetHeight` in the same task | The read's synchronous flush honors the pending write. Deterministic, no frame wait. |
 | Just inserted / unhid synchronously; want the settled box | one `ResizeObserver` callback (preferred) or double-`rAF` | Give the engine a committed layout pass. RO waits for the *actual event*; double-rAF waits a fixed 2 frames that may be too short (async content on frame 3) or wasteful. |
 | Text with web fonts | `await document.fonts.ready` before trusting | Fallback metrics give shorter, provisional line boxes. |
@@ -115,6 +115,7 @@ Commit a value only when it **passes the predicate** *and* is **stable across tw
 The widget body is a flex/grid child. The host chrome laid out first and resolved the row before the body had content to contribute, so the auto-height body collapsed to `border-top + border-bottom` (~1–2px). The preview read that 1–2px as "the height" and drew the Stage badge against a ~0-height box — the badge detached from its corner.
 
 Both halves of the fix were required:
+
 1. **Producer:** measure the auto-height tile **off-flow with `height: auto` at a fixed real width**, so it sizes to its own content instead of the stretched/constrained row.
 2. **Consumer:** the preview **rejects border-only measurements** and waits for a real height before it enters normal flow and positions the badge.
 

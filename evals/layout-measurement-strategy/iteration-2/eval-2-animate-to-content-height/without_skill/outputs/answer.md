@@ -237,6 +237,7 @@ function Panel({ open, children }: { open: boolean; children: React.ReactNode })
 - **`transitionend` guarded by `propertyName` and `target`** so a child element's own transition doesn't prematurely flip us to `auto`. Plus a `setTimeout` safety net for the cases where `transitionend` never fires (zero-height change, backgrounded tab).
 
 ### Edge cases worth knowing
+
 - If the panel can start open *and* its content isn't measured yet on the first frame, the initial `auto` is correct (browser lays it out naturally) — we only need a real measurement when a *transition* begins, by which point layout has happened.
 - Nested transitions on children can fire `transitionend` that bubbles; the `e.target === containerRef.current` guard is doing real work — don't remove it.
 - If you have dozens of these on screen, drop `will-change: height` (it costs memory per layer) and consider animating only when in view.

@@ -46,7 +46,7 @@ The row reads them:
 When the clone is under `<body>`, it no longer inherits those variables. Every `var()` **falls back to its default** (the second argument, or the property's initial value, or `unset`). So:
 
 - In *normal* density, the clone accidentally lands near the fallback values, so it's only a little off.
-- In *compact* density, the real row is driven entirely by the compact variable overrides. The clone loses all of them and reverts to the fallbacks (which are your *comfortable* defaults). So the clone renders larger font / more padding than compact... 
+- In *compact* density, the real row is driven entirely by the compact variable overrides. The clone loses all of them and reverts to the fallbacks (which are your *comfortable* defaults). So the clone renders larger font / more padding than compact...
 
 —but you said compact comes back *shorter*, not taller. That points to the interaction with **width and container queries**: the compact container is also narrower or triggers a compact `@container` branch that wraps text differently. With the variables gone *and* the container query gone, the text lays out at fallback font size across an unconstrained (usually too‑wide) width, wraps onto fewer lines, and the measured height collapses. Either way, the root cause is identical: **the clone is not inheriting the cascade that the real row lives in.**
 

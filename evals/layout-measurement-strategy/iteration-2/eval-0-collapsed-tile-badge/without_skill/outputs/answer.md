@@ -17,7 +17,7 @@ There are two robust fixes, and you should probably do both:
 
 `useLayoutEffect` runs synchronously after the first DOM commit but *before the browser paints*. That's good for avoiding a visible flash of a wrong value — but it fires based on the DOM as it exists **at first commit**. Your tile body "streams its content in asynchronously," which means at first commit the body is empty or a placeholder. An empty auto-height body contributes 0 to layout, so:
 
-```
+```text
 offsetHeight ≈ border-top (1px) + border-bottom (1px) = ~2px
 ```
 

@@ -51,6 +51,7 @@ function observeRow(el: HTMLElement, id: string) {
 ```
 
 Notes:
+
 - Take `borderBoxSize[0].blockSize`, not `getBoundingClientRect().height`, when you can — RO hands you the value *without forcing a synchronous reflow*, and it re-fires on every change so you never have to guess the "right instant" to read.
 - `Math.ceil` the height before feeding it back into layout; a rounded-down height crops the last line of text.
 - Key the cache by a **stable item id**, not by DOM position, so recycled row nodes don't poison each other's entries.

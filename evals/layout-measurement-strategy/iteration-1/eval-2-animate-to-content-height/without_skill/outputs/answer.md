@@ -217,7 +217,7 @@ The two-element structure (**outer clipper** + **inner content**) is not optiona
 ## Why this survives the things that usually break it
 
 | Failure mode | How this avoids it |
-|---|---|
+| --- | --- |
 | **Content changes while open** (text reflow on resize, async data loading in) | The `ResizeObserver` is subscribed to the inner content the whole time it's open. Any size change re-pins the height and the transition animates to it — no manual "remeasure" call needed. |
 | **Measuring a hidden element gives 0** | The content is never `display: none` and never unmounted. Collapse is `overflow: hidden` + `height: 0`, so the inner element always has a real, measurable layout height. |
 | **Measured too early** (before fonts/images settle) | We don't measure once. Fonts loading, images decoding, and lazy content all change the box size → the observer fires → we correct. Self-healing by construction. |
