@@ -19,7 +19,7 @@ These inherit by default, so a probe under `document.body` gets `body`'s values,
 
 ## Container queries — the sharpest off-flow break
 
-`@container (min-width: 400px) { .card { … } }` resolves against the nearest ancestor with `container-type: inline-size` (or `size`), matching `container-name` if named. The queried element's **content-relevant** styles (font-size, line-height, padding, `display`, column count, `line-clamp`) flip based on the *container's* size — invisible in the element's own CSS.
+`@container (min-width: 400px) { .card { … } }` resolves against the nearest ancestor with `container-type: inline-size` (or `size`), matching `container-name` if named. The queried element's **content-relevant** styles (font-size, line-height, padding, `display`, column count, `line-clamp`) flip based on the _container's_ size — invisible in the element's own CSS.
 
 Off-flow this breaks three ways:
 
@@ -31,14 +31,14 @@ To measure a container-queried node off-flow you must reproduce `[query containe
 
 ## Shadow DOM / constructable stylesheets
 
-A node in a shadow root is styled by that root's `adoptedStyleSheets` + inner `<style>`, plus inherited properties that pierce the boundary (font, color, custom properties — inheritance crosses shadow boundaries; author rules do not). A probe in the light DOM or a *different* shadow root **loses every shadow stylesheet** → the node renders unstyled-ish → wrong size.
+A node in a shadow root is styled by that root's `adoptedStyleSheets` + inner `<style>`, plus inherited properties that pierce the boundary (font, color, custom properties — inheritance crosses shadow boundaries; author rules do not). A probe in the light DOM or a _different_ shadow root **loses every shadow stylesheet** → the node renders unstyled-ish → wrong size.
 
 To measure a shadow node off-flow, mount the probe **inside a shadow root that adopts the same `CSSStyleSheet` objects** — constructable stylesheets make this cheap: share the sheet object, don't clone. Custom properties still need reproducing as inherited values into that root.
 
 ## The three strategies, ranked by fidelity vs cost
 
 1. **In-place (pattern A) — `visibility: hidden` content behind a placeholder.** Highest fidelity: nothing to replicate because nothing moved. The correct default.
-2. **Portal-in-subtree.** Render the probe via a portal mounted *within the real ancestor chain / shadow root*, positioned `absolute` off-view (`inset-inline-start: -10000px`). Keeps inheritance, variables, container, and shadow sheets while leaving flow. Middle cost, high fidelity — good for lists where per-row in-place is too heavy.
+2. **Portal-in-subtree.** Render the probe via a portal mounted _within the real ancestor chain / shadow root_, positioned `absolute` off-view (`inset-inline-start: -10000px`). Keeps inheritance, variables, container, and shadow sheets while leaving flow. Middle cost, high fidelity — good for lists where per-row in-place is too heavy.
 3. **`cloneNode(true)` into a matching wrapper on `body`.** Lowest fidelity, highest burden — you manually reconstruct font/line-height/variable context, the query container at the right size, and (if shadow) a root with shared adopted sheets. Every item above is a step you can forget. Use only when 1 and 2 are impossible (measuring before the real subtree exists), and **replicate ancestors, never copy computed styles onto the node.**
 
 ## Placeholder height & list stability (avoiding CLS)
@@ -50,7 +50,7 @@ A placeholder with no reserved block-size collapses, then expands when content l
 3. **Acceptable — a min-height floor sized to the common case**, paired with `contain-intrinsic-size` so first paint isn't zero.
 4. **Avoid — a fixed pixel height that's wrong for variable content** (trades CLS for clipping / dead space).
 
-**Cooperate, don't compete:** when you *do* off-flow measure, cache the result and feed it back as `contain-intrinsic-size`, so the exact-measurement and the browser's self-correcting placeholder reinforce each other instead of re-measuring on every reveal.
+**Cooperate, don't compete:** when you _do_ off-flow measure, cache the result and feed it back as `contain-intrinsic-size`, so the exact-measurement and the browser's self-correcting placeholder reinforce each other instead of re-measuring on every reveal.
 
 ## How bad measurement surfaces as visible jank
 

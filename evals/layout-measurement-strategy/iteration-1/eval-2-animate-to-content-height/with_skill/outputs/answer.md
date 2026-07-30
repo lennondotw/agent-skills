@@ -2,25 +2,24 @@
 
 Here's a version that's built to survive the exact things that bite people: content that reflows on resize, async content that streams in after the animation started, and the classic "measured height comes back wrong / zero / one line short."
 
-The single most important design decision is **what we measure**. We never measure the animating container (its height is `0` or a pinned pixel value — measuring it just reads back what we set). We put an inner wrapper inside it that is **never height-constrained** (`height: auto`, in normal block flow) and observe *that* with a `ResizeObserver`. The container clips it with `overflow: hidden`. So the number we read is always the true content height, whether the panel is open, closed, or mid-animation — and it re-fires by itself on every reflow, font swap, image load, or async chunk.
+The single most important design decision is **what we measure**. We never measure the animating container (its height is `0` or a pinned pixel value — measuring it just reads back what we set). We put an inner wrapper inside it that is **never height-constrained** (`height: auto`, in normal block flow) and observe _that_ with a `ResizeObserver`. The container clips it with `overflow: hidden`. So the number we read is always the true content height, whether the panel is open, closed, or mid-animation — and it re-fires by itself on every reflow, font swap, image load, or async chunk.
 
 ## The hook
 
 ```tsx
 import {
+  type CSSProperties,
+  type RefObject,
+  type TransitionEvent,
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
-  type CSSProperties,
-  type RefObject,
-  type TransitionEvent,
 } from "react";
 
 // useLayoutEffect warns during SSR (there's no DOM to measure). Fall back to
 // useEffect on the server; the first real measurement happens on the client anyway.
-const useIsoLayoutEffect =
-  typeof window !== "undefined" ? useLayoutEffect : useEffect;
+const useIsoLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 /**
  * Reject a measurement we shouldn't trust, and ceil the ones we keep.
@@ -98,9 +97,8 @@ export function useAutoHeight(
       if (!entry) return;
       // Prefer the borderBoxSize the observer already computed (no forced reflow);
       // fall back to a rect read on the rare engine that omits it.
-      const block =
-        entry.borderBoxSize?.[0]?.blockSize ??
-        entry.target.getBoundingClientRect().height;
+      const block = entry.borderBoxSize?.[0]?.blockSize
+        ?? entry.target.getBoundingClientRect().height;
 
       const next = trustHeight(block);
       if (next == null) return;
@@ -190,7 +188,7 @@ export function useAutoHeight(
 ## Usage
 
 ```tsx
-function FaqItem({ question, answer }: { question: string; answer: React.ReactNode }) {
+function FaqItem({ question, answer }: { question: string; answer: React.ReactNode; }) {
   const [open, setOpen] = useState(false);
   const { containerProps, contentProps } = useAutoHeight(open);
 
@@ -209,13 +207,13 @@ function FaqItem({ question, answer }: { question: string; answer: React.ReactNo
 
 ## Why it's robust — the parts that actually matter
 
-**We measure the content, not the container.** The container's height is a value *we* write (`0` / `Npx`), so reading it back tells us nothing. The inner `.auto-height__content` node is a plain block in normal flow at `height: auto`, so it always resolves to its true content height. This is the whole ballgame: height is a function of the available width and the content, and this node is never starved of either. The container clipping it with `overflow: hidden` does **not** constrain the child's own layout height — the child simply overflows and the observer sees the full number.
+**We measure the content, not the container.** The container's height is a value _we_ write (`0` / `Npx`), so reading it back tells us nothing. The inner `.auto-height__content` node is a plain block in normal flow at `height: auto`, so it always resolves to its true content height. This is the whole ballgame: height is a function of the available width and the content, and this node is never starved of either. The container clipping it with `overflow: hidden` does **not** constrain the child's own layout height — the child simply overflows and the observer sees the full number.
 
 **The height is always live, even while closed.** Because the content node is real and unconstrained the whole time (never `display:none`), the observer keeps `measuredHeight` current whether the panel is open or shut. So when someone clicks "open," the target height is already known and correct — no first-open flicker, no reading a stale zero.
 
-**Content that changes while open just works.** A `ResizeObserver` doesn't fire once; it re-fires on *every* reflow. Window resize that rewraps a paragraph, a web font swapping in and changing line boxes, an image finishing decode, an async fetch injecting more DOM — each triggers the callback, `measuredHeight` updates, and the container animates to the new height. You don't have to know *when* content is "done"; you observe and let it settle. (This is why the hook does not take a one-shot `scrollHeight` snapshot — a snapshot taken before the async content lands would be too short, and the content would sit clipped behind `overflow: hidden`.)
+**Content that changes while open just works.** A `ResizeObserver` doesn't fire once; it re-fires on _every_ reflow. Window resize that rewraps a paragraph, a web font swapping in and changing line boxes, an image finishing decode, an async fetch injecting more DOM — each triggers the callback, `measuredHeight` updates, and the container animates to the new height. You don't have to know _when_ content is "done"; you observe and let it settle. (This is why the hook does not take a one-shot `scrollHeight` snapshot — a snapshot taken before the async content lands would be too short, and the content would sit clipped behind `overflow: hidden`.)
 
-**`Math.ceil` on every committed height.** Sub-pixel content heights rounded *down* crop the final line of text by a fraction of a pixel — the "why is the descender of the last line cut off" bug. We always round up.
+**`Math.ceil` on every committed height.** Sub-pixel content heights rounded _down_ crop the final line of text by a fraction of a pixel — the "why is the descender of the last line cut off" bug. We always round up.
 
 **No `display: none`, ever.** A `display: none` element generates no layout box and measures `0`. That's why collapsed content is hidden with `height: 0` + `overflow: hidden` on the container (which keeps the box) and taken out of the a11y/tab tree with `aria-hidden` + `inert` — never with `display: none`, which would blind the observer.
 

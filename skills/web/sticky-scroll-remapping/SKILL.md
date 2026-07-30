@@ -118,7 +118,7 @@ clean and let the spacer provide only scroll distance:
     {children}
   </div>
   <div aria-hidden className="pointer-events-none h-[2000px]" />
-</section>
+</section>;
 ```
 
 ### 3. Measure The Real Geometry

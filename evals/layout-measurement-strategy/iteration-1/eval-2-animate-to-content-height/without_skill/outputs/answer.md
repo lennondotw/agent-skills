@@ -1,6 +1,6 @@
 # `useAutoHeight` — a robust expand/collapse height hook
 
-Animating to `height: auto` is the classic "why is this wrong again" problem. The browser can't transition to/from `auto`, so you have to feed it a real pixel value. The traps that bite people are almost always about *when and how you measure that pixel value*:
+Animating to `height: auto` is the classic "why is this wrong again" problem. The browser can't transition to/from `auto`, so you have to feed it a real pixel value. The traps that bite people are almost always about _when and how you measure that pixel value_:
 
 - measuring while the element is `display: none` (you get `0`),
 - measuring once, before web fonts / images / async content settle (you get a stale, too-short height and the panel clips),
@@ -11,9 +11,9 @@ Animating to `height: auto` is the classic "why is this wrong again" problem. Th
 The design below sidesteps all of these. The core ideas:
 
 1. **Never unmount or `display: none` the content** — collapse is done purely with `overflow: hidden` + `height: 0`. The content stays laid out and measurable at all times.
-2. **A `ResizeObserver` is the single source of truth for the natural height.** We don't measure once — we *subscribe* to the content's size. When text reflows on resize or async content loads in, the observer fires and we re-pin the height. The CSS transition animates the delta for free.
+2. **A `ResizeObserver` is the single source of truth for the natural height.** We don't measure once — we _subscribe_ to the content's size. When text reflows on resize or async content loads in, the observer fires and we re-pin the height. The CSS transition animates the delta for free.
 3. **The height is written imperatively to the DOM, never through React's `style` prop.** React only manages properties it knows about; since `height` is never in the returned `style` object, re-renders can't clobber it.
-4. **The first commit is applied with the transition suppressed**, so a panel that starts open just *is* open, with no animate-from-zero flash.
+4. **The first commit is applied with the transition suppressed**, so a panel that starts open just _is_ open, with no animate-from-zero flash.
 
 ---
 
@@ -21,17 +21,10 @@ The design below sidesteps all of these. The core ideas:
 
 ```tsx
 // useAutoHeight.ts
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  type CSSProperties,
-  type RefObject,
-} from 'react';
+import { type CSSProperties, type RefObject, useEffect, useLayoutEffect, useRef } from "react";
 
 // useLayoutEffect warns during SSR; fall back to useEffect on the server.
-const useIsomorphicLayoutEffect =
-  typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+const useIsomorphicLayoutEffect = typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 export interface UseAutoHeightOptions {
   /** Transition duration in ms. Default: 300. */
@@ -49,7 +42,7 @@ export interface UseAutoHeightResult<
     ref: RefObject<C | null>;
     className: string;
     style: CSSProperties;
-    'aria-hidden': boolean;
+    "aria-hidden": boolean;
     inert?: boolean;
   };
   /** Spread onto the INNER content wrapper (the thing whose height we track). */
@@ -68,7 +61,7 @@ export function useAutoHeight<
   open: boolean,
   options: UseAutoHeightOptions = {},
 ): UseAutoHeightResult<C, I> {
-  const { duration = 300, easing = 'ease' } = options;
+  const { duration = 300, easing = "ease" } = options;
 
   const containerRef = useRef<C | null>(null);
   const contentRef = useRef<I | null>(null);
@@ -101,7 +94,7 @@ export function useAutoHeight<
       // Jump to the correct height with the transition turned off, so a
       // panel that starts open doesn't animate open from zero.
       const prevTransition = container.style.transition;
-      container.style.transition = 'none';
+      container.style.transition = "none";
       setHeight(target);
       // Force a style flush so subsequent changes animate from `target`.
       void container.offsetHeight;
@@ -130,16 +123,16 @@ export function useAutoHeight<
   // `height` is deliberately absent — the effect owns it.
   const style: CSSProperties = {
     // Custom props feed the CSS transition; overridable per-instance.
-    ['--auto-height-duration' as string]: `${duration}ms`,
-    ['--auto-height-easing' as string]: easing,
+    ["--auto-height-duration" as string]: `${duration}ms`,
+    ["--auto-height-easing" as string]: easing,
   };
 
   return {
     containerProps: {
       ref: containerRef,
-      className: 'auto-height',
+      className: "auto-height",
       style,
-      'aria-hidden': !open,
+      "aria-hidden": !open,
       // Keep collapsed content out of the tab order / a11y tree.
       inert: !open,
     },
@@ -175,7 +168,7 @@ That's the whole required stylesheet. Two rules matter:
 - `overflow: hidden` — without it the content spills out of the 0-height box.
 - `height: 0` as the base — this is the value that's in effect during SSR and for the split second before the layout effect runs, so a closed panel is closed from the very first paint.
 
-> **Optional but recommended:** give your inner content wrapper `display: flow-root` (or padding). This establishes a block formatting context so the children's top/bottom margins are *inside* the measured box instead of collapsing through it. Margin-collapse is the sneakiest source of "the measured height is a bit short."
+> **Optional but recommended:** give your inner content wrapper `display: flow-root` (or padding). This establishes a block formatting context so the children's top/bottom margins are _inside_ the measured box instead of collapsing through it. Margin-collapse is the sneakiest source of "the measured height is a bit short."
 
 ```css
 .auto-height__content {
@@ -188,7 +181,7 @@ That's the whole required stylesheet. Two rules matter:
 ## Usage
 
 ```tsx
-function FaqItem({ question, answer }: { question: string; answer: React.ReactNode }) {
+function FaqItem({ question, answer }: { question: string; answer: React.ReactNode; }) {
   const [open, setOpen] = React.useState(false);
   const { containerProps, contentProps } = useAutoHeight(open);
 
@@ -216,18 +209,18 @@ The two-element structure (**outer clipper** + **inner content**) is not optiona
 
 ## Why this survives the things that usually break it
 
-| Failure mode | How this avoids it |
-| --- | --- |
+| Failure mode                                                                  | How this avoids it                                                                                                                                                                          |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Content changes while open** (text reflow on resize, async data loading in) | The `ResizeObserver` is subscribed to the inner content the whole time it's open. Any size change re-pins the height and the transition animates to it — no manual "remeasure" call needed. |
-| **Measuring a hidden element gives 0** | The content is never `display: none` and never unmounted. Collapse is `overflow: hidden` + `height: 0`, so the inner element always has a real, measurable layout height. |
-| **Measured too early** (before fonts/images settle) | We don't measure once. Fonts loading, images decoding, and lazy content all change the box size → the observer fires → we correct. Self-healing by construction. |
-| **React re-render resets the height** | `height` is written straight to `container.style` and is never present in the React-managed `style` prop, so reconciliation leaves it alone. |
-| **Mount flash** (a panel that starts open animates from 0) | The first commit runs inside a `transition: none` window with a forced reflow, so it snaps to the correct height instantly. |
-| **Sub-pixel clipping** | We read a fractional height (`getBoundingClientRect` / `borderBoxSize.blockSize`) instead of integer `offsetHeight`. |
-| **CSS transforms lie about size** | Inside the observer we prefer `borderBoxSize`, which reports layout size regardless of an ancestor `scale()`. |
-| **Margin collapse shortens the measurement** | Recommended `display: flow-root` on the content wrapper keeps child margins inside the measured box. |
-| **Accessibility / tab order** | Collapsed content gets `aria-hidden` + `inert`, so it's out of the a11y tree and unfocusable while hidden, but still in the DOM and measurable. |
-| **Reduced-motion users** | A single media query drops the duration to ~0; the imperative height writes then apply instantly with no visible animation. |
+| **Measuring a hidden element gives 0**                                        | The content is never `display: none` and never unmounted. Collapse is `overflow: hidden` + `height: 0`, so the inner element always has a real, measurable layout height.                   |
+| **Measured too early** (before fonts/images settle)                           | We don't measure once. Fonts loading, images decoding, and lazy content all change the box size → the observer fires → we correct. Self-healing by construction.                            |
+| **React re-render resets the height**                                         | `height` is written straight to `container.style` and is never present in the React-managed `style` prop, so reconciliation leaves it alone.                                                |
+| **Mount flash** (a panel that starts open animates from 0)                    | The first commit runs inside a `transition: none` window with a forced reflow, so it snaps to the correct height instantly.                                                                 |
+| **Sub-pixel clipping**                                                        | We read a fractional height (`getBoundingClientRect` / `borderBoxSize.blockSize`) instead of integer `offsetHeight`.                                                                        |
+| **CSS transforms lie about size**                                             | Inside the observer we prefer `borderBoxSize`, which reports layout size regardless of an ancestor `scale()`.                                                                               |
+| **Margin collapse shortens the measurement**                                  | Recommended `display: flow-root` on the content wrapper keeps child margins inside the measured box.                                                                                        |
+| **Accessibility / tab order**                                                 | Collapsed content gets `aria-hidden` + `inert`, so it's out of the a11y tree and unfocusable while hidden, but still in the DOM and measurable.                                             |
+| **Reduced-motion users**                                                      | A single media query drops the duration to ~0; the imperative height writes then apply instantly with no visible animation.                                                                 |
 
 ### Notes and trade-offs
 

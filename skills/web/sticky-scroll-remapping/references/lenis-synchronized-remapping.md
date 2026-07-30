@@ -13,21 +13,21 @@ When Lenis is active, Lenis is the usable synchronization point:
 
 ```ts
 let rafId = window.requestAnimationFrame(function raf(time) {
-  lenis.raf(time)
-  syncStickyRemapping(window.scrollY, time)
-  rafId = window.requestAnimationFrame(raf)
-})
+  lenis.raf(time);
+  syncStickyRemapping(window.scrollY, time);
+  rafId = window.requestAnimationFrame(raf);
+});
 ```
 
 The remap subscriber should use cached geometry and write the transform synchronously:
 
 ```ts
 const syncStickyRemapping = () => {
-  const progress = getProgressFromScrollY(window.scrollY, cachedGeometry)
-  const y = getStickyCompensation(progress, cachedGeometry)
+  const progress = getProgressFromScrollY(window.scrollY, cachedGeometry);
+  const y = getStickyCompensation(progress, cachedGeometry);
 
-  layer.style.transform = `translate3d(0, ${y}px, 0)`
-}
+  layer.style.transform = `translate3d(0, ${y}px, 0)`;
+};
 ```
 
 React state, native `scroll` events, `useScroll`, `useTransform`, and framework render commits are not

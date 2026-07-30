@@ -15,7 +15,7 @@ There are two robust fixes, and you should probably do both:
 
 ### 1. `useLayoutEffect` with `[]` fires once, before the content exists
 
-`useLayoutEffect` runs synchronously after the first DOM commit but *before the browser paints*. That's good for avoiding a visible flash of a wrong value — but it fires based on the DOM as it exists **at first commit**. Your tile body "streams its content in asynchronously," which means at first commit the body is empty or a placeholder. An empty auto-height body contributes 0 to layout, so:
+`useLayoutEffect` runs synchronously after the first DOM commit but _before the browser paints_. That's good for avoiding a visible flash of a wrong value — but it fires based on the DOM as it exists **at first commit**. Your tile body "streams its content in asynchronously," which means at first commit the body is empty or a placeholder. An empty auto-height body contributes 0 to layout, so:
 
 ```text
 offsetHeight ≈ border-top (1px) + border-bottom (1px) = ~2px
@@ -23,17 +23,17 @@ offsetHeight ≈ border-top (1px) + border-bottom (1px) = ~2px
 
 That's your mysterious "2px tall." The `~2` is literally the chrome wrapper's border, because `offsetHeight` includes borders and padding (it's the border-box height) but the content box has collapsed to nothing.
 
-The empty dependency array `[]` means the effect never re-runs. So you capture 2px and never correct it. The reason the tile *visually* "jumps to full height a moment later" is that React re-renders when the streamed content arrives and the browser reflows — but that reflow doesn't re-trigger your measurement. The tile looks right; the badge (which is positioned from the stale `tileHeight`) stays wrong until some *other* re-render happens to fire the effect again (or it never fully corrects, depending on your deps).
+The empty dependency array `[]` means the effect never re-runs. So you capture 2px and never correct it. The reason the tile _visually_ "jumps to full height a moment later" is that React re-renders when the streamed content arrives and the browser reflows — but that reflow doesn't re-trigger your measurement. The tile looks right; the badge (which is positioned from the stale `tileHeight`) stays wrong until some _other_ re-render happens to fire the effect again (or it never fully corrects, depending on your deps).
 
 ### 2. Web fonts change height after layout
 
-Even if the content were present at first commit, web-font text is measured with the **fallback font** until the web font loads and swaps in (`font-display: swap`). The fallback and the web font almost never have identical metrics (line-height, ascent/descent), so the tile's height changes when the font swaps — *after* your effect ran. `document.fonts.ready` is the signal for this, and a plain `useLayoutEffect([])` doesn't wait for it.
+Even if the content were present at first commit, web-font text is measured with the **fallback font** until the web font loads and swaps in (`font-display: swap`). The fallback and the web font almost never have identical metrics (line-height, ascent/descent), so the tile's height changes when the font swaps — _after_ your effect ran. `document.fonts.ready` is the signal for this, and a plain `useLayoutEffect([])` doesn't wait for it.
 
 ### 3. Images have no height until they load/decode
 
 An `<img>` without explicit `width`/`height` (or `aspect-ratio`) contributes **zero height** until the image loads and the browser learns its intrinsic size, then reflows. Again: after your effect. This is also a Cumulative Layout Shift (CLS) source independent of the badge bug.
 
-So you have three separate async height sources — streamed content, font swap, image decode — all landing *after* your single measurement. Any one of them reproduces the bug.
+So you have three separate async height sources — streamed content, font swap, image decode — all landing _after_ your single measurement. Any one of them reproduces the bug.
 
 ---
 
@@ -42,7 +42,7 @@ So you have three separate async height sources — streamed content, font swap,
 A corner badge is a positioning problem, not a measurement problem. Make the tile a positioning context and let the badge pin itself to the corner. The browser recomputes this on every reflow for free, with no JS, no state, no stale values.
 
 ```tsx
-function Tile({ stage, children }: { stage: string; children: React.ReactNode }) {
+function Tile({ stage, children }: { stage: string; children: React.ReactNode; }) {
   return (
     // The chrome wrapper. `relative` makes it the containing block for the badge.
     <div className="tile-chrome">
@@ -82,7 +82,7 @@ If your badge needs to overhang the corner (half outside the border) rather than
 .stage-badge { top: -10px; right: -10px; }
 ```
 
-This is the robust answer for the specific symptom you described. Measuring the tile height to place a child *inside* that same tile is a round-trip you don't need — the layout engine already knows where the corner is.
+This is the robust answer for the specific symptom you described. Measuring the tile height to place a child _inside_ that same tile is a round-trip you don't need — the layout engine already knows where the corner is.
 
 ---
 
@@ -125,15 +125,17 @@ function useMeasuredHeight<T extends HTMLElement>() {
 Usage:
 
 ```tsx
-function Tile({ stage, children }: { stage: string; children: React.ReactNode }) {
+function Tile({ stage, children }: { stage: string; children: React.ReactNode; }) {
   const [tileRef, tileHeight] = useMeasuredHeight<HTMLDivElement>();
 
   return (
     <div className="tile-chrome" ref={tileRef}>
-      {/* Only render/position the badge once we have a real height.
-          Until then, either hide it or (better) place it with CSS as in Fix A. */}
+      {
+        /* Only render/position the badge once we have a real height.
+          Until then, either hide it or (better) place it with CSS as in Fix A. */
+      }
       {tileHeight != null && (
-        <span className="stage-badge" style={{ /* …if you must use the number… */ }}>
+        <span className="stage-badge" style={{/* …if you must use the number… */}}>
           {stage}
         </span>
       )}
@@ -161,7 +163,7 @@ Key correctness notes for Fix B:
 
 These aren't strictly the badge bug, but they're the same family of "async height" problem and will bite you elsewhere (notably CLS):
 
-1. **Give images explicit dimensions.** Set `width`/`height` attributes or `aspect-ratio` in CSS so the image reserves its box *before* it loads. This removes the image-driven reflow entirely.
+1. **Give images explicit dimensions.** Set `width`/`height` attributes or `aspect-ratio` in CSS so the image reserves its box _before_ it loads. This removes the image-driven reflow entirely.
 
    ```css
    .tile-body img { aspect-ratio: 16 / 9; width: 100%; height: auto; }

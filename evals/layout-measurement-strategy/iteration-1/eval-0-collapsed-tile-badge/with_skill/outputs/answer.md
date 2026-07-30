@@ -2,7 +2,7 @@
 
 ## TL;DR
 
-Your `useLayoutEffect(…, [])` measures the tile **exactly once, on the first commit — before the tile has any content in it**. At that instant the auto-height body is empty (content streams in later, fonts haven't swapped, images haven't loaded), so the tile is only as tall as the chrome's `border-top + border-bottom` — the classic **border-only measurement** of ~2px. You then commit that 2px into `tileHeight` and position the badge against a ~0-height box, so it collides with the border. When the streamed content finally arrives the real DOM tile grows to full height on its own, and the badge *looks* fixed only because some later re-render happened to re-run past your measurement — which is luck, not correctness.
+Your `useLayoutEffect(…, [])` measures the tile **exactly once, on the first commit — before the tile has any content in it**. At that instant the auto-height body is empty (content streams in later, fonts haven't swapped, images haven't loaded), so the tile is only as tall as the chrome's `border-top + border-bottom` — the classic **border-only measurement** of ~2px. You then commit that 2px into `tileHeight` and position the badge against a ~0-height box, so it collides with the border. When the streamed content finally arrives the real DOM tile grows to full height on its own, and the badge _looks_ fixed only because some later re-render happened to re-run past your measurement — which is luck, not correctness.
 
 The robust fix is two cooperating halves: **observe until the size settles** (don't measure at a single guessed instant), and **refuse to commit a border-only number** (a validity predicate, not just a value).
 
@@ -17,9 +17,9 @@ A layout size is not a stable property you can read whenever you like. Auto **he
 1. **`useLayoutEffect(…, [])` fires once, right after the first commit.** The tile body "streams its content in asynchronously," so on that first commit the body is empty or nearly empty. There is nothing inside to give it height.
 2. **The tile is an auto-height body inside a chrome wrapper.** With no content contribution, its border box collapses to just the chrome's vertical border (and any padding that isn't collapsed) — roughly 2px. `offsetHeight` faithfully reports that 2px. The browser gives you no signal that this layout is provisional; a plausible-but-wrong number comes back **silently**, and you commit it.
 3. **Web fonts and images make it worse.** Even if some text were present on first commit, fallback-font metrics and not-yet-decoded images give shorter, provisional line boxes. The height keeps changing after your one read.
-4. **The empty dependency array means you never look again.** The visible "jump to full height" is the real DOM tile growing as content arrives — that happens regardless of your state. But `tileHeight` stays pinned at 2px until something *else* triggers a re-render that happens to re-run your effect's logic. That's why it "sometimes" self-heals a moment later: it's a race, and the outcome is non-deterministic (it'll flip with StrictMode, with how the parent re-renders on each stream chunk, with timing on a fast vs slow machine).
+4. **The empty dependency array means you never look again.** The visible "jump to full height" is the real DOM tile growing as content arrives — that happens regardless of your state. But `tileHeight` stays pinned at 2px until something _else_ triggers a re-render that happens to re-run your effect's logic. That's why it "sometimes" self-heals a moment later: it's a race, and the outcome is non-deterministic (it'll flip with StrictMode, with how the parent re-renders on each stream chunk, with timing on a fast vs slow machine).
 
-This is precisely the border-only failure mode: *a content-bearing element measuring to ~chrome height means layout hasn't happened yet, not that the height is 0.*
+This is precisely the border-only failure mode: _a content-bearing element measuring to ~chrome height means layout hasn't happened yet, not that the height is 0._
 
 ### Why "measure at the right instant" can't be the fix
 
@@ -31,7 +31,7 @@ There is no right instant to guess. Content arrives late and in stages — first
 
 Two halves, both required:
 
-- **Producer — observe, don't snapshot.** Use a `ResizeObserver`. It fires after layout and before paint, and **re-fires on every reflow** — first layout, font swap, image load, each stream chunk. It converts "is the geometry final?" from a guess into an event. Take the value when it has *settled* (unchanged across two consecutive deliveries).
+- **Producer — observe, don't snapshot.** Use a `ResizeObserver`. It fires after layout and before paint, and **re-fires on every reflow** — first layout, font swap, image load, each stream chunk. It converts "is the geometry final?" from a guess into an event. Take the value when it has _settled_ (unchanged across two consecutive deliveries).
 - **Consumer — reject border-only.** Even a good producer can hand you an early collapsed value. Guard it: refuse any height whose content contribution over the chrome is ≤ ~1px, refuse a non-positive height, and refuse an implausible collapse versus the last good value. Commit only a height that **passes the predicate**.
 
 Measure the tile **in place** — do not move it to a probe or `document.body`. In-place measurement replicates nothing because nothing moved: it keeps the containing block, the formatting context, the chrome's border/padding, inherited custom properties, container-query ancestry, and any shadow stylesheets. Off-flow probing here would only reintroduce bugs.
@@ -44,8 +44,8 @@ Measure the tile **in place** — do not move it to a probe or `document.body`. 
 // it has no content — anything at/below it means "layout hasn't happened yet."
 function isTrustworthy(borderBoxH: number, chromeH: number, prev?: number): boolean {
   if (!Number.isFinite(borderBoxH) || borderBoxH <= 0) return false; // no box / display:none
-  if (borderBoxH - chromeH <= 1) return false;                       // border-only collapse
-  if (prev != null && borderBoxH < prev * 0.25) return false;        // implausible collapse
+  if (borderBoxH - chromeH <= 1) return false; // border-only collapse
+  if (prev != null && borderBoxH < prev * 0.25) return false; // implausible collapse
   return true;
 }
 ```
@@ -76,8 +76,8 @@ export function useSettledTileHeight<T extends HTMLElement>(chromeH: number) {
     const el = ref.current;
     if (!el) return;
 
-    let committed: number | undefined;   // last value we accepted
-    let pending: number | undefined;     // candidate seen once, awaiting confirmation
+    let committed: number | undefined; // last value we accepted
+    let pending: number | undefined; // candidate seen once, awaiting confirmation
     let disposed = false;
 
     const consider = (raw: number) => {
@@ -131,8 +131,10 @@ function WidgetTile({ stage, children }: Props) {
 
   return (
     <div className="chrome" style={{ position: "relative" }}>
-      {/* Only render the badge once we have a trustworthy height. Until then it
-          simply isn't placed — no flash of a badge sitting on the border. */}
+      {
+        /* Only render the badge once we have a trustworthy height. Until then it
+          simply isn't placed — no flash of a badge sitting on the border. */
+      }
       {height != null && (
         <StageBadge
           stage={stage}
@@ -153,19 +155,19 @@ If the badge's position is genuinely derived from the measured height (e.g. vert
 
 ## Why each piece matters
 
-- **`ResizeObserver` instead of a one-shot read** — the content is async in *stages* (stream chunks, font swap, image decode). RO re-fires on each, so you converge on the real height instead of betting on one instant that's guaranteed to be too early. It also hands you the value without forcing a synchronous reflow.
-- **Reject-border-only guard** — this is what actually kills your bug. Waiting isn't enough on its own, because an eager first RO delivery (or your old `useLayoutEffect`) will still hand over the collapsed 2px. The predicate refuses to commit it: *border-box − chrome ≤ 1px ⇒ "not measured," not "height is 0."*
+- **`ResizeObserver` instead of a one-shot read** — the content is async in _stages_ (stream chunks, font swap, image decode). RO re-fires on each, so you converge on the real height instead of betting on one instant that's guaranteed to be too early. It also hands you the value without forcing a synchronous reflow.
+- **Reject-border-only guard** — this is what actually kills your bug. Waiting isn't enough on its own, because an eager first RO delivery (or your old `useLayoutEffect`) will still hand over the collapsed 2px. The predicate refuses to commit it: _border-box − chrome ≤ 1px ⇒ "not measured," not "height is 0."_
 - **Settle-across-two-deliveries** — RO fires on every reflow, so a single delivery isn't proof the layout is final. Two consecutive equal (±1px) deliveries is the practical "settled" signal.
 - **Measure in place, not off-flow** — nothing moves, so the chrome's border/padding, the containing block, fonts, custom properties, and container-query context are all exactly the real ones. Appending a probe to `document.body` would silently drop custom properties, ancestor classes (`.dark`, `[data-density]`), `@container` context, and shadow `adoptedStyleSheets`, and you'd measure a different element than you render.
-- **`Math.ceil`** — feeding a rounded-*down* height back into layout crops the last line of text. Round up for any box that must not clip. Keep one box type end-to-end: `offsetHeight` / `borderBoxSize.blockSize` are both border-box, which matches how you position the absolute badge.
-- **`useLayoutEffect` (not `useEffect`) to install the observer** — so the badge is placed after commit but before paint, with no flash of the un-sized state. But note: the *decision to place* now waits for `height != null`, not for a single measurement instant.
+- **`Math.ceil`** — feeding a rounded-_down_ height back into layout crops the last line of text. Round up for any box that must not clip. Keep one box type end-to-end: `offsetHeight` / `borderBoxSize.blockSize` are both border-box, which matches how you position the absolute badge.
+- **`useLayoutEffect` (not `useEffect`) to install the observer** — so the badge is placed after commit but before paint, with no flash of the un-sized state. But note: the _decision to place_ now waits for `height != null`, not for a single measurement instant.
 - **`document.fonts.ready` nudge** — RO already catches font swaps, but on slow-font machines this makes the tile settle deterministically instead of waiting for the next unrelated reflow.
 
 ## Pre-trust checklist (applied here)
 
 - [x] Has a layout box — measured in place, not `display: none`.
 - [x] Real inline size / context — in place, so chrome border/padding, fonts, vars, container queries are all real.
-- [x] Content is real — RO takes the *settled* value across stream chunks + font swap + image decode.
+- [x] Content is real — RO takes the _settled_ value across stream chunks + font swap + image decode.
 - [x] Right box + deliberate rounding — border-box throughout, `Math.ceil`.
 - [x] No transform contaminating the read — `offsetHeight` / `borderBoxSize` ignore transforms.
 - [x] Passed the reject-border-only guard.

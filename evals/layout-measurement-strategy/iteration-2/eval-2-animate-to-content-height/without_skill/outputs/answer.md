@@ -4,23 +4,17 @@ The core problem with "animate to `auto`" is that CSS can't transition to/from `
 
 The robustness traps I've been bitten by (and this hook defends against):
 
-1. **Measuring before layout / fonts settle** — reading height too early gives the wrong number. Measure with a `ResizeObserver` on the *content*, not a one-shot `scrollHeight` read.
+1. **Measuring before layout / fonts settle** — reading height too early gives the wrong number. Measure with a `ResizeObserver` on the _content_, not a one-shot `scrollHeight` read.
 2. **Content changing while open** — text reflows on window resize, async data loads in later. If you froze a pixel height at open time, the panel clips or leaves a gap. The observer keeps the height in sync.
 3. **Fighting the transition** — if you set an explicit pixel height and leave it, later content growth won't animate and the container can't naturally reflow. After the open transition ends, we set height back to `auto` so the panel is fully fluid; we only re-pin a pixel value at the moment we need to animate.
-4. **The 0→auto and auto→0 direction problem** — you can't transition *from* `auto`. Before collapsing you must first pin the current pixel height (forcing a reflow) and *then* animate to 0.
+4. **The 0→auto and auto→0 direction problem** — you can't transition _from_ `auto`. Before collapsing you must first pin the current pixel height (forcing a reflow) and _then_ animate to 0.
 5. **First-paint flash** — on mount, a panel that starts open shouldn't animate from 0; and one that starts closed shouldn't flash open. We gate the first commit.
-6. **`box-sizing` / padding** — `scrollHeight` and `getBoundingClientRect` behave differently with padding. We measure an inner wrapper and put visual padding *inside* it so the number we animate to is exactly the number we set.
+6. **`box-sizing` / padding** — `scrollHeight` and `getBoundingClientRect` behave differently with padding. We measure an inner wrapper and put visual padding _inside_ it so the number we animate to is exactly the number we set.
 
 ## The hook
 
 ```tsx
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type UseAutoHeightOptions = {
   /** Transition duration in ms. Must match the CSS if you override it there. */
@@ -75,9 +69,8 @@ export function useAutoHeight(
     const ro = new ResizeObserver((entries) => {
       const entry = entries[0];
       // borderBoxSize is the reliable cross-box-model measurement.
-      const next =
-        entry.borderBoxSize?.[0]?.blockSize ??
-        entry.target.getBoundingClientRect().height;
+      const next = entry.borderBoxSize?.[0]?.blockSize
+        ?? entry.target.getBoundingClientRect().height;
       measuredRef.current = next;
 
       // If we're open and currently pinned to a pixel value (i.e. mid or
@@ -207,7 +200,7 @@ export function useAutoHeight(
 ## Usage
 
 ```tsx
-function Panel({ open, children }: { open: boolean; children: React.ReactNode }) {
+function Panel({ open, children }: { open: boolean; children: React.ReactNode; }) {
   const { containerRef, contentRef, containerStyle } = useAutoHeight(open);
 
   return (
@@ -230,7 +223,7 @@ function Panel({ open, children }: { open: boolean; children: React.ReactNode })
 - **Two elements, two jobs.** `containerRef` is the thing whose `height` animates and clips (`overflow: hidden`). `contentRef` is the natural-height inner box the `ResizeObserver` watches. Never measure the animating element itself — its height is a lie during the transition.
 - **`ResizeObserver`, not `scrollHeight`.** A one-time `scrollHeight` read is the classic bug: it's taken before webfonts swap, before images decode, before async data arrives — so it's wrong. The observer re-measures whenever the content actually changes size, including window-resize reflow and late-loading content.
 - **Release to `auto` after expanding.** Once open, the container is `height: auto`, so any subsequent growth/shrink is handled by the browser with zero JS and no clipping. We only re-pin a pixel value at the instant we start an animation.
-- **Handle the `auto → 0` direction explicitly.** You cannot transition *from* `auto`. On close we pin the current measured px, force a synchronous reflow (`getBoundingClientRect()`), then drop to `0` on the next frame so the browser sees two numbers.
+- **Handle the `auto → 0` direction explicitly.** You cannot transition _from_ `auto`. On close we pin the current measured px, force a synchronous reflow (`getBoundingClientRect()`), then drop to `0` on the next frame so the browser sees two numbers.
 - **`useLayoutEffect`** for the measurement and the pin-height step so writes happen before paint — no flicker between "auto" and the pixel value.
 - **First-commit gate** so an initially-open panel doesn't animate open on mount.
 - **`prefers-reduced-motion`** snaps instead of sliding.
@@ -238,6 +231,6 @@ function Panel({ open, children }: { open: boolean; children: React.ReactNode })
 
 ### Edge cases worth knowing
 
-- If the panel can start open *and* its content isn't measured yet on the first frame, the initial `auto` is correct (browser lays it out naturally) — we only need a real measurement when a *transition* begins, by which point layout has happened.
+- If the panel can start open _and_ its content isn't measured yet on the first frame, the initial `auto` is correct (browser lays it out naturally) — we only need a real measurement when a _transition_ begins, by which point layout has happened.
 - Nested transitions on children can fire `transitionend` that bubbles; the `e.target === containerRef.current` guard is doing real work — don't remove it.
 - If you have dozens of these on screen, drop `will-change: height` (it costs memory per layer) and consider animating only when in view.

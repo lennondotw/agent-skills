@@ -18,7 +18,7 @@ Your clone is measured **outside the context that determines its height**. When 
 
 Any one of these makes the measured height wrong. All three compound, and the
 container-query one is exactly why "compact density" is the worst offender: compact
-density is *implemented* as a container-query (or a class on the container that variables
+density is _implemented_ as a container-query (or a class on the container that variables
 key off), and that whole mechanism is dead once the node lives on `<body>`.
 
 `getBoundingClientRect()` itself is fine — but it also **excludes margins**, so if your
@@ -33,7 +33,7 @@ rows have vertical margins those are silently dropped too.
 `@container` rules match against the size of the nearest ancestor that established a
 containment context (`container-type: inline-size` / `size`). Your real rows sit inside
 the feed container, so `@container (max-width: …)` (or a named container query) resolves
-against *that* element's width.
+against _that_ element's width.
 
 When the clone is a direct child of `<body>`, there is no container ancestor anymore
 (unless `<body>` happens to be one, which it isn't). Every `@container` block that styled
@@ -48,8 +48,8 @@ is a function of ancestry, and you severed the ancestry.
 
 `--row-padding`, `--row-font-size`, `--line-height`, etc. are almost certainly declared on
 the container or a theme root (`.feed`, `[data-density="compact"]`, `.theme-…`), not on
-`:root`. Custom properties inherit down the tree. On `<body>` the clone is *above* /
-*outside* the element that declares them, so `var(--row-padding, 8px)` falls back to its
+`:root`. Custom properties inherit down the tree. On `<body>` the clone is _above_ /
+_outside_ the element that declares them, so `var(--row-padding, 8px)` falls back to its
 default, or computes to `initial` (which for an unregistered property means the value is
 invalid and the declaration using it is dropped). Either way spacing and type size differ,
 so height differs.
@@ -79,14 +79,14 @@ position, you're under-counting per row.
 Two viable strategies. I recommend **measuring in-context** if you must pre-measure, and
 strongly recommend **measure-after-render (dynamic virtualization)** as the robust default.
 
-### Option A (recommended): measure the *real* rows after render, cache, and correct
+### Option A (recommended): measure the _real_ rows after render, cache, and correct
 
 This is what mature virtualizers (TanStack Virtual, react-virtual, react-window's
 `VariableSizeList` with measurement) do. Don't try to predict height from a detached
 clone at all. Instead:
 
 1. Start every unmeasured row with an **estimated** height.
-2. Render the rows that fall in the viewport *inside the real container*.
+2. Render the rows that fall in the viewport _inside the real container_.
 3. Measure their actual DOM box with `ResizeObserver` (handles font swaps, image loads,
    density toggles, resize — all automatically).
 4. Write the measured height into a cache keyed by item id, and reflow positions.
@@ -158,7 +158,7 @@ If you'd rather not build this, use **TanStack Virtual** (`@tanstack/react-virtu
 `measureElement` — it does exactly this: estimate, render, `ResizeObserver`-measure,
 correct. It's the least-surprising path for a feed with variable, theme-dependent heights.
 
-### Option B: pre-measure, but do it *in context*
+### Option B: pre-measure, but do it _in context_
 
 If your architecture genuinely needs a height before the row is ever mounted (e.g. you
 compute the full scroll height up front), then keep the measurement node **inside the real
@@ -208,7 +208,7 @@ Critical points for Option B:
 
 - **The host must be a descendant of the same container** whose width the `@container`
   rules key off, and which declares the spacing/font custom properties. If your density
-  variables live on a `[data-density]` wrapper, the host must be inside *that* too. When in
+  variables live on a `[data-density]` wrapper, the host must be inside _that_ too. When in
   doubt, mount the host next to a real row.
 - **Set an explicit width** equal to the real row's content-box width, so wrapping matches.
   Read it from a real row / the container once: `container.clientWidth` minus horizontal
@@ -218,9 +218,9 @@ Critical points for Option B:
 - **Re-measure on relevant changes**: density toggle, viewport resize (container width
   changes → container queries re-evaluate → heights change), and font load. Invalidate the
   cache on each.
-- Prefer moving the *actual* React-rendered subtree into the host over hand-cloning, so the
+- Prefer moving the _actual_ React-rendered subtree into the host over hand-cloning, so the
   computed styles are identical. If you must `cloneNode(true)`, remember clones don't carry
-  canvas contents, form state, or `::before/::after`-dependent JS, but they *do* inherit CSS
+  canvas contents, form state, or `::before/::after`-dependent JS, but they _do_ inherit CSS
   from their new position — which is exactly why position matters.
 
 ---

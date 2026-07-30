@@ -1,32 +1,32 @@
-import { execFileSync } from 'node:child_process'
+import { execFileSync } from "node:child_process";
 
 function readFigmaToken() {
   if (process.env.TODAY_FIGMA_DEV_TOKEN) {
-    return process.env.TODAY_FIGMA_DEV_TOKEN
+    return process.env.TODAY_FIGMA_DEV_TOKEN;
   }
 
-  return execFileSync('fish', ['-lc', 'printf %s "$TODAY_FIGMA_DEV_TOKEN"'], {
-    encoding: 'utf8',
-  }).trim()
+  return execFileSync("fish", ["-lc", 'printf %s "$TODAY_FIGMA_DEV_TOKEN"'], {
+    encoding: "utf8",
+  }).trim();
 }
 
-const token = readFigmaToken()
+const token = readFigmaToken();
 
 if (!token) {
-  throw new Error('TODAY_FIGMA_DEV_TOKEN is not set in process env or fish')
+  throw new Error("TODAY_FIGMA_DEV_TOKEN is not set in process env or fish");
 }
 
-const response = await fetch('https://api.figma.com/v1/me', {
+const response = await fetch("https://api.figma.com/v1/me", {
   headers: {
-    'X-Figma-Token': token,
+    "X-Figma-Token": token,
   },
-})
+});
 
 if (!response.ok) {
-  throw new Error(`Figma /v1/me failed: ${response.status} ${await response.text()}`)
+  throw new Error(`Figma /v1/me failed: ${response.status} ${await response.text()}`);
 }
 
-const me = await response.json()
+const me = await response.json();
 
 console.log(
   JSON.stringify(
@@ -38,4 +38,4 @@ console.log(
     null,
     2,
   ),
-)
+);

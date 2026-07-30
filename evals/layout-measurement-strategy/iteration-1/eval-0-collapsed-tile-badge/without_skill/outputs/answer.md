@@ -2,18 +2,18 @@
 
 ## Diagnosis
 
-Your measurement is a **one-shot snapshot taken too early**. The bug is not really about `offsetHeight` being wrong — at the moment you read it, the tile genuinely *is* ~2px tall. You're reading a real height, just at the wrong time.
+Your measurement is a **one-shot snapshot taken too early**. The bug is not really about `offsetHeight` being wrong — at the moment you read it, the tile genuinely _is_ ~2px tall. You're reading a real height, just at the wrong time.
 
 Walk through the actual timeline:
 
 1. React commits the first render. The tile body has **no content yet** (it streams in asynchronously). So the body's content box is 0px high, and the "2px" you see is just the chrome wrapper's top+bottom border (a 1px border on each side).
 2. `useLayoutEffect(fn, [])` fires **once**, synchronously after that first commit, before paint. You read `offsetHeight` → ~2px → `setTileHeight(2)`.
 3. The absolutely-positioned Stage badge is placed using `tileHeight = 2`, so it lands on top of the border. That's the broken first frame.
-4. Later, three independent async things happen, each of which changes the height *after* your effect already ran and will never run again:
+4. Later, three independent async things happen, each of which changes the height _after_ your effect already ran and will never run again:
    - The streamed content arrives and gets inserted into the body.
    - **Web fonts** finish loading and the text reflows to its final line count (FOUT/FOIT — text is invisible or falls back, then swaps, changing height).
    - **Images** decode and get their intrinsic height (any `<img>` without a reserved height reflows the layout when it loads).
-5. Each of those triggers a browser reflow, the tile jumps to full height — but your `tileHeight` state is still `2`. The reason it "looks fine a moment later" is almost certainly that *some other* re-render (new props, another state update, streaming causing a parent re-render) happens to re-run your layout logic or re-mount, and by then the content is settled.
+5. Each of those triggers a browser reflow, the tile jumps to full height — but your `tileHeight` state is still `2`. The reason it "looks fine a moment later" is almost certainly that _some other_ re-render (new props, another state update, streaming causing a parent re-render) happens to re-run your layout logic or re-mount, and by then the content is settled.
 
 So the two root causes are:
 
@@ -31,7 +31,7 @@ Two layers. First, **prefer CSS so you don't need to measure at all**. Second, i
 If the badge is in the top-right corner, it doesn't actually need the tile's height — `top`/`right` on an absolutely-positioned element are relative to the positioned ancestor's padding box, not its height. Make the chrome wrapper the positioning context and place the badge directly:
 
 ```tsx
-function Tile({ children }: { children: React.ReactNode }) {
+function Tile({ children }: { children: React.ReactNode; }) {
   return (
     // position: relative makes this the containing block for the badge.
     // No height measurement needed at all.
@@ -66,10 +66,10 @@ This is immune to the entire class of bug: there is no first-frame snapshot, no 
 
 ### Layer 2: if you truly need the measured height in JS
 
-Sometimes you legitimately need the number (e.g. to size a sibling, drive a tooltip, report telemetry, or the badge position is a function of height for a non-trivial reason). Then measure it *continuously*, not once:
+Sometimes you legitimately need the number (e.g. to size a sibling, drive a tooltip, report telemetry, or the badge position is a function of height for a non-trivial reason). Then measure it _continuously_, not once:
 
 ```tsx
-import { useState, useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 
 function useMeasuredHeight<T extends HTMLElement>() {
   const ref = useRef<T | null>(null);
@@ -97,12 +97,12 @@ function useMeasuredHeight<T extends HTMLElement>() {
 ```
 
 ```tsx
-function Tile({ children }: { children: React.ReactNode }) {
+function Tile({ children }: { children: React.ReactNode; }) {
   const [tileRef, tileHeight] = useMeasuredHeight<HTMLDivElement>();
 
   return (
     <div ref={tileRef} className="tile-chrome" style={{ position: "relative" }}>
-      <StageBadge style={{ /* ...derive from tileHeight if you must... */ }} />
+      <StageBadge style={{/* ...derive from tileHeight if you must... */}} />
       <div className="tile-body">{children}</div>
     </div>
   );
@@ -123,7 +123,7 @@ Why `ResizeObserver` is the correct tool:
 
 ### Bonus: kill the layout jank at the source
 
-Even with the observer, the tile visibly *jumps* as fonts/images land. Reduce that reflow churn:
+Even with the observer, the tile visibly _jumps_ as fonts/images land. Reduce that reflow churn:
 
 - Give `<img>` explicit `width`/`height` (or `aspect-ratio`) so it reserves space before decoding — no post-load shift.
 - Use `font-display: optional` or `swap` deliberately, and consider preloading the critical web font so the swap happens before/at first paint.
@@ -131,5 +131,5 @@ Even with the observer, the tile visibly *jumps* as fonts/images land. Reduce th
 
 ## Summary
 
-- **Why:** `useLayoutEffect(fn, [])` measures exactly once, at the first commit, when the body is empty and fonts/images haven't loaded. The ~2px is the real height at that instant (just the chrome border). Async content, web-font swap, and image decode all grow the tile *after* your effect ran and it never re-measures — so the badge, positioned from the stale `2`, sits on the border until some unrelated re-render fixes it.
+- **Why:** `useLayoutEffect(fn, [])` measures exactly once, at the first commit, when the body is empty and fonts/images haven't loaded. The ~2px is the real height at that instant (just the chrome border). Async content, web-font swap, and image decode all grow the tile _after_ your effect ran and it never re-measures — so the badge, positioned from the stale `2`, sits on the border until some unrelated re-render fixes it.
 - **Fix:** Prefer CSS — make the chrome `position: relative` and pin the badge with `top`/`right`, needing no measurement. If you must have the height in JS, replace the one-shot effect with a `ResizeObserver` that updates on the initial box and every reflow. Pair with reserved image dimensions and a considered `font-display` to remove the visible jump.
