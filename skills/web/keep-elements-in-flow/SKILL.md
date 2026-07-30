@@ -1,7 +1,7 @@
 ---
 name: keep-elements-in-flow
 description: |
-  Keep UI elements in normal flow for resilient, content-driven layouts. Use when building or reviewing overlapping cards, preview stacks, localized actions, responsive surfaces, or code with many fixed dimensions and absolutely positioned children. Prefer Flexbox, Grid, negative margins, and content-driven sizing; use relative positioning for stacking and keep absolute positioning for true overlays that should not reserve layout space.
+  Keep UI elements in normal flow for resilient, content-driven layouts. Use when building or reviewing overlapping cards, preview stacks, localized actions, responsive surfaces, corner badges and other pinned overlays, or code with many fixed dimensions and hand-written offsets on absolutely positioned children. Prefer Flexbox, Grid, negative margins, and content-driven sizing; use relative positioning for stacking; and when an element must leave the flow, position a zero-size anchor container instead of writing coordinates on the element itself.
 ---
 
 # Keep Elements In Flow
@@ -108,6 +108,67 @@ Use absolute positioning when the element should not influence surrounding geome
 Give the containing block `relative`, and reserve any required safe area in the in-flow content so
 the overlay does not cover text or controls.
 
+## Anchor Containers
+
+Leaving the flow does not mean writing coordinates on the element itself. Position an absolute
+zero-size **anchor** at the reference point and let its child lay out from there in flow.
+
+```tsx
+// Brittle: the offsets are hand-derived from the badge's current size.
+<div className="relative">
+  <Card />
+  <Badge className="absolute -top-1.5 -right-2.5" />
+</div>;
+```
+
+```tsx
+// Anchored: the anchor marks the corner; the badge stays centered on it at any size.
+<div className="relative">
+  <Card />
+  <div className="absolute top-0 right-0 flex size-0 items-center justify-center">
+    <Badge className="shrink-0 whitespace-nowrap" />
+  </div>
+</div>;
+```
+
+A `size-0` box has no area, so it reserves no space and its own center is the anchor point.
+`items-center justify-center` centers the overflowing child on that point, so the badge can change
+size, gain a second digit, or become an icon without any offset being recomputed. Tune placement by
+moving the anchor, never the child.
+
+## An Absolute Container Is Still A Layout Container
+
+Choose how many axes the anchor measures:
+
+| Anchor                                             | Provides                                                       |
+| -------------------------------------------------- | -------------------------------------------------------------- |
+| `absolute top-0 right-0 size-0` + flex centering   | A single point to align on                                     |
+| `absolute inset-y-0 right-0 w-0 flex items-center` | An edge column: height from the parent, `gap` between children |
+| `absolute inset-x-0 top-0 h-0 flex justify-center` | An edge row: width from the parent                             |
+| `absolute inset-0`                                 | A full region with normal alignment and padding                |
+
+A zero axis means "measure nothing, just give me this line or point". A stretched axis borrows the
+parent's size, so the anchor can align, center, and distribute children like any flex container.
+Either way the wrapper carries the geometry and the content keeps its own intrinsic size.
+
+An in-flow wrapper can make the same per-axis choice — see `zero-height-side-element`, where a
+`flex h-0 items-center` wrapper measures zero in the block axis while remaining a normal flex child
+in the inline axis. Both are the same mechanism aimed at different questions:
+
+- Does the element sit _beside_ its siblings and own a slot in the row — a trailing toggle, action
+  button, or status badge? It has to reserve inline space so long labels truncate instead of running
+  underneath it. Use an in-flow wrapper and zero out only the axis you want to opt out of.
+- Does the element sit _on_ the thing it annotates — a notification count, unread dot, or corner
+  dismiss button? It should reserve nothing and may hang outside its target's box. Use an absolute
+  anchor.
+
+The element's type is a hint, not the rule: a badge in a settings row is a trailing sibling, while
+the same badge on an avatar is an overlay. Decide by whether siblings must move for it.
+
+Constraints to check: the containing block needs `relative`; children of a zero-size flex anchor
+need `shrink-0` (and `whitespace-nowrap` for text) because the container's inline size is `0`; and an
+ancestor with `overflow-hidden` or `overflow-clip` will cut off anything painting outside the box.
+
 ## Review Questions
 
 1. Should this element reserve space in its parent?
@@ -116,5 +177,7 @@ the overlay does not cover text or controls.
 4. Can a negative margin create the overlap while preserving flow?
 5. Is a fixed width or height a real component contract or an unexamined coordinate?
 6. Is the absolute element a true overlay that should remain independent of content?
+7. If it must be out of flow, can a zero-size anchor own the position so the child only owns its own
+   size?
 
 If the first two answers are yes, keep the element in flow.
