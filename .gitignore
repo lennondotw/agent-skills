@@ -17,3 +17,6 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+# Machine-local skill state pointers
+skills/**/workspace-path
