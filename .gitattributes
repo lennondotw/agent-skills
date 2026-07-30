@@ -13,13 +13,16 @@
 *.css text
 *.html text
 
+# Store images in Git LFS
+*.png filter=lfs diff=lfs merge=lfs -text
+*.jpg filter=lfs diff=lfs merge=lfs -text
+*.jpeg filter=lfs diff=lfs merge=lfs -text
+*.gif filter=lfs diff=lfs merge=lfs -text
+*.webp filter=lfs diff=lfs merge=lfs -text
+*.avif filter=lfs diff=lfs merge=lfs -text
+
 # Declare binary files
-*.png binary
-*.jpg binary
-*.jpeg binary
-*.gif binary
 *.ico binary
-*.webp binary
 *.woff binary
 *.woff2 binary
 *.ttf binary
