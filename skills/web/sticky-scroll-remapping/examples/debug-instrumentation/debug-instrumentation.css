@@ -1,0 +1,55 @@
+.scroll-debug-page-root {
+  position: relative;
+  min-height: 100vh;
+}
+
+.scroll-debug-ruler {
+  position: absolute;
+  z-index: 100;
+  top: 0;
+  bottom: 0;
+  width: 34px;
+  pointer-events: none;
+}
+
+.scroll-debug-ruler-left {
+  left: 0;
+}
+
+.scroll-debug-ruler-right {
+  right: 0;
+}
+
+.scroll-debug-panel {
+  position: fixed;
+  z-index: 101;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 8px;
+  width: 240px;
+  padding: 12px;
+  border: 1px solid rgb(0 0 0 / 16%);
+  background: rgb(255 255 255 / 88%);
+  color: #111;
+  font: 12px/1.4 system-ui, sans-serif;
+  backdrop-filter: blur(16px);
+}
+
+.scroll-debug-panel label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .scroll-debug-page-root {
+    --scroll-debug-ruler-color: 255 255 255;
+  }
+
+  .scroll-debug-panel {
+    border-color: rgb(255 255 255 / 18%);
+    background: rgb(20 20 20 / 88%);
+    color: #f5f5f5;
+  }
+}
