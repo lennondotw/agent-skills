@@ -1,6 +1,6 @@
 ---
 name: stable-width-button
-description: Prevent button width jitter when content changes dynamically. Use when building buttons or tabs whose label switches between multiple known values, or when layout shift occurs on state-driven content change.
+description: Prevent width jitter when content changes dynamically, by reserving the width of every content the element can hold. Use when building buttons or tabs whose label switches between known values, when a numeric readout (slider value, counter, timer, percentage) shifts its neighbours as it changes, or when layout shift occurs on state-driven content change.
 ---
 
 # Stable-Width Button
@@ -91,3 +91,59 @@ This pattern is not limited to buttons. It applies to any element where:
 3. Width stability matters for the surrounding layout.
 
 Tabs, badges, status indicators, and inline labels are all candidates.
+
+## Slot Reservation: Content With Too Many Values To Enumerate
+
+`allPossibleContents` stops working when the value set is large but structured — a slider readout (`0`–`140`), a counter, `mm:ss`, a percentage. Enumerating 141 variants to reserve three digits is absurd, and `10 × 10` for two digits is already silly.
+
+Decompose the content into **independent positions** instead, and reserve each position separately: `[label] + [0-9] + [0-9]`. Ten alternatives per digit slot cover every number those slots can spell — two digits cost 10 hidden nodes, not 100.
+
+| Axis                         | Behaviour                     |
+| ---------------------------- | ----------------------------- |
+| Alternatives within a slot   | `max` — a zero-height column  |
+| Slots within the reservation | `sum` — a flex row of columns |
+
+```tsx
+const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+
+/** Each `slots` entry is a column of alternatives contributing its widest; the row sums the slots. */
+const ReservedWidth = ({ slots }: { slots: string[][] }) => (
+  <span aria-hidden className="invisible flex h-0 flex-row overflow-clip leading-0">
+    {slots.map((alternatives, index) => (
+      <span className="flex flex-col" key={`${index}-${alternatives[0]}`}>
+        {alternatives.map((alternative) => (
+          <span key={alternative}>{alternative}</span>
+        ))}
+      </span>
+    ))}
+  </span>
+);
+
+/** `gap 0` … `gap 140` — the track never moves, and the label column never resizes. */
+const Knob = ({ label, value, max, onChange }: KnobProps) => (
+  <label className="col-span-2 grid grid-cols-subgrid items-center">
+    <span className="text-right">
+      {label} {value}
+      <ReservedWidth slots={[[`${label}\u00a0`], ...Array.from({ length: String(max).length }, () => DIGITS)]} />
+    </span>
+    <input type="range" min={0} max={max} value={value} onChange={(event) => onChange(Number(event.target.value))} />
+  </label>
+);
+```
+
+Two details are load-bearing:
+
+- **The reservation must be a block-level sibling of the visible content, not an inline one.** On its own line it makes the container resolve to `max(visible, reserved)`; drop it into the same line box — or make the cell itself a flex row — and the two widths _sum_, padding the cell by its own reserved width forever.
+- **Trailing spaces need `\u00a0`.** A plain trailing space collapses at the end of a line box and reserves nothing, so a slot written as `` `${label} ` `` silently loses the gap between the word and the number.
+
+Because each row now reserves its own worst case, a shared grid column (`grid-cols-subgrid`) stays put too: the column's max comes from fixed row widths rather than from whichever row currently happens to hold the longest value.
+
+### Verify It, Don't Eyeball It
+
+A few pixels of jitter are easy to miss and easy to reintroduce. Measure the neighbour that would move, at both ends of the value range:
+
+```js
+const trackLeft = () => Math.round(document.querySelector('input[type=range]').getBoundingClientRect().left);
+// Set the value to min, mid, and max: trackLeft() must not change, and the row's
+// height must match what it was before the reservation was added.
+```
